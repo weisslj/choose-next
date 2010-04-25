@@ -41,7 +41,7 @@ Options:
   -i, --no-read         don't use log file to filter selection
   -L FILE, --logfile=FILE
                         path of log file (default:
-                        ~/.play_shuffle/${DIR//\//_})
+                        ~/.choose-next/${DIR//\//_})
   -l, --last            play last played file
   -n NUM, --number=NUM  number of files to select (-1: infinite)
   -p, --prepend         prepend selected filename instead of appending
