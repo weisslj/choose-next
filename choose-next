@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+# Copyright (C) 2010 Johannes Weißl
+# License GPLv3+:
+# GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+# This is free software: you are free to change and redistribute it.
+# There is NO WARRANTY, to the extent permitted by law.
+
 import sys
 import os
 import locale
@@ -149,7 +155,11 @@ def main(argv=sys.argv):
     global verbosity
 
     usage = 'usage: %prog [OPTION]... DIR [FILE]...'
-    version = '%prog 1.0'
+    version = '%prog 1.0\nCopyright (C) 2010 Johannes Weißl\n'\
+        'License GPLv3+: GNU GPL version 3 or later '\
+        '<http://gnu.org/licenses/gpl.html>.\n'\
+        'This is free software: you are free to change and redistribute it.\n'\
+        'There is NO WARRANTY, to the extent permitted by law.'
     desc = 'Chooses a file from directory DIR (recursively) and print it\'s '\
         'name to stdout. Afterwards it is appended to a log file. Only '\
         'files which are not in log file are considered for selection.\n'\
