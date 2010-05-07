@@ -9,6 +9,7 @@
 
 import sys
 import os
+import re
 import locale
 import random
 import subprocess
@@ -66,6 +67,20 @@ def logfile_prepend(name, entry, logfile_content):
 def shellquote(s):
     return "'" + s.replace("'", "'\\''") + "'"
 
+numkey_regex = re.compile('(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
+def numkey(s):
+    m = numkey_regex.match(s)
+    if m:
+        return float(m.group(1)), locale.strxfrm(m.group(2))
+    return (0.0, locale.strxfrm(s))
+
+def path_split_all(path):
+    '''Return a list of path elements, e.g. 'a/b/..//c' -> ['a', 'c'].'''
+    return os.path.normpath(path).split(os.sep)
+
+def numkey_path(path):
+    return tuple(numkey(s) for s in path_split_all(path))
+
 def choose_next(dir, logfile, options, next_file=None):
 
     logfile_content_list = read_logfile(logfile)
@@ -74,30 +89,32 @@ def choose_next(dir, logfile, options, next_file=None):
 
     played = set(played_list)
     available = set(get_file_list(dir))
-    available_list = sorted(available)
+    available_list = list(available)
+    available_list.sort(key=numkey_path)
     remaining = available - played
-
-    debug('directory to choose from: %s', dir)
-    debug('logfile: %s', logfile)
-    debug('files available: %d', len(available))
-    for f in sorted(available):
-        debug('%s', f, v=3)
-    debug('files in logfile: %d', len(played))
-    for f in played_list:
-        debug('%s', f, v=3)
-    debug('files remaining for selection: %d', len(remaining))
-    for f in sorted(remaining):
-        debug('%s', f, v=3)
 
     rewrite_logfile = False
     if not remaining:
         rewrite_logfile = True
         remaining = available
 
+    remaining_list = list(remaining)
+    remaining_list.sort(key=numkey_path)
+
+    debug('directory to choose from: %s', dir)
+    debug('logfile: %s', logfile)
+    debug('files available: %d', len(available))
+    for f in available_list:
+        debug('%s', f, v=3)
+    debug('files in logfile: %d', len(played))
+    for f in played_list:
+        debug('%s', f, v=3)
+    debug('files remaining for selection: %d', len(remaining))
+    for f in remaining_list:
+        debug('%s', f, v=3)
+
     if not remaining:
         error('error, no files available in %s', dir)
-
-    remaining_list = sorted(remaining)
 
     if next_file:
         pass
@@ -153,6 +170,8 @@ def main(argv=sys.argv):
 
     global prog_name
     global verbosity
+
+    locale.setlocale(locale.LC_ALL, '')
 
     usage = 'usage: %prog [OPTION]... DIR [FILE]...'
     version = '%prog 1.0\nCopyright (C) 2010 Johannes Weißl\n'\
