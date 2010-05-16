@@ -244,7 +244,7 @@ def main(argv=sys.argv):
     else:
         logdir = os.path.expanduser(logdir)
         if not os.path.exists(logdir):
-            os.makedirs(libdir)
+            os.makedirs(logdir)
         logfile = os.path.join(logdir, dir.replace(os.path.sep, '_'))
         logfile = os.path.abspath(logfile)
 
