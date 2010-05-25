@@ -13,7 +13,7 @@ import re
 import locale
 import random
 import subprocess
-from optparse import OptionParser
+from optparse import OptionParser, SUPPRESS_HELP
 
 verbosity = 1
 
@@ -35,11 +35,26 @@ def error(msg, *args, **kwargs):
     print >> sys.stderr, msg
     sys.exit(1)
 
-def get_file_list(dir):
+def read_dir(path, all_entries=False):
+    '''Return a list of paths in directory at path. If all_entries is not
+    true, exclude all entries starting with a dot (.).
+    '''
+    if not os.path.exists(path):
+        return []
+    lst = os.listdir(path)
+    if not all_entries:
+        lst[:] = [os.path.realpath(f) for f in lst if not f.startswith('.')]
+    return lst
+
+def read_dir_recursive(path, all_entries=False):
+    '''Return a list of paths in directory at path (recursively). If
+    all_entries is not true, exclude all entries starting with a dot (.).
+    '''
     lst = []
-    for root, dirs, files in os.walk(dir):
-        for name in files:
-            lst.append(os.path.join(root, name))
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            if all_entries or not f.startswith('.'):
+                lst.append(os.path.realpath(os.path.join(root, f)))
     return lst
 
 def read_logfile(name):
@@ -88,7 +103,10 @@ def choose_next(dir, logfile, options, next_file=None):
     played_list = logfile_content_list if not options.no_read else []
 
     played = set(played_list)
-    available = set(get_file_list(dir))
+    if options.recursive:
+        available = set(read_dir_recursive(dir))
+    else:
+        available = set(read_dir(dir))
     available_list = list(available)
     available_list.sort(key=numkey_path)
     remaining = available - played
@@ -189,6 +207,7 @@ def main(argv=sys.argv):
 
     parser = OptionParser(usage=usage, version=version, description=desc)
     parser.set_defaults(verbosity=verbosity)
+    parser.set_defaults(recursive=True)
 
     parser.add_option('-c', '--command', metavar='CMD',
         help='execute CMD on every selected file; %s in CMD is substituted '\
@@ -211,12 +230,16 @@ def main(argv=sys.argv):
         '${DIR//%s/_}' % (os.path.sep.replace('/', '\\/'))))
     parser.add_option('-l', '--last', action='store_true',
         default=False, help='play last played file')
+    parser.add_option('-N', '--no-recursive', dest='recursive', action='store_false',
+        help='do not scan DIR recursively')
     parser.add_option('-n', '--number', type='int', default=1, metavar='NUM',
         help='number of files to select (-1: infinite)')
     parser.add_option('-p', '--prepend', action='store_true',
         default=False, help='prepend selected filename instead of appending')
     parser.add_option('-q', '--quiet', action='store_const', dest='verbosity',
         const=0, help='don\'t output anything')
+    parser.add_option('-R', '--recursive', action='store_true', dest='recursive',
+        help=SUPPRESS_HELP)
     parser.add_option('-r', '--random', action='store_true',
         default=False, help='choose a random file from DIR')
     parser.add_option('-v', '--verbose', action='count', dest='verbosity',
@@ -231,13 +254,15 @@ def main(argv=sys.argv):
         error('error, no directory specified\n'\
                 'Try `%s --help\' for more information.', prog_name)
     dir = args[0]
-    next_files = args[1:]
+    next_files = [os.path.realpath(f) for f in args[1:]]
 
     if not os.path.exists(dir):
         error('error, directory `%s\' doesn\'t exist', dir)
 
     if not os.path.isdir(dir):
         error('error, `%s\' is no directory', dir)
+
+    dir = os.path.realpath(dir)
 
     if options.logfile:
         logfile = options.logfile
@@ -246,7 +271,6 @@ def main(argv=sys.argv):
         if not os.path.exists(logdir):
             os.makedirs(logdir)
         logfile = os.path.join(logdir, dir.replace(os.path.sep, '_'))
-        logfile = os.path.abspath(logfile)
 
     if options.clear:
         if os.path.exists(logfile):
