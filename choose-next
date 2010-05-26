@@ -43,7 +43,8 @@ def read_dir(path, all_entries=False):
         return []
     lst = os.listdir(path)
     if not all_entries:
-        lst[:] = [os.path.realpath(f) for f in lst if not f.startswith('.')]
+        lst[:] = [os.path.realpath(os.path.join(path,f))
+                  for f in lst if not f.startswith('.')]
     return lst
 
 def read_dir_recursive(path, all_entries=False):
@@ -139,7 +140,7 @@ def choose_next(dir, logfile, options, next_file=None):
     elif options.last and played_list:
         next_file = played_list[-1]
     elif options.random:
-        next_file = random.choice(list_remaining)
+        next_file = random.choice(remaining_list)
     else:
         x = 0
         if played_list:
