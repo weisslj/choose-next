@@ -10,4 +10,10 @@ setup(name='choose-next',
       author='Johannes Weißl',
       author_email='jargon@molb.org',
       url='http://github.com/weisslj/choose-next',
+      license='GNU GPL v3',
+      classifiers=[
+          'License :: OSI Approved :: GNU General Public License (GPL)',
+          'Programming Language :: Python :: 2.5',
+          'Topic :: Utilities',
+      ],
       scripts=['choose-next'])
