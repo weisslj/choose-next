@@ -7,7 +7,7 @@ setup(name='choose-next',
       version='1.0',
       description='Chooses a file from a directory. '\
                   'Very handy to re-watch tv series!',
-      author='Johannes Weißl',
+      author=u'Johannes Weißl',
       author_email='jargon@molb.org',
       url='http://github.com/weisslj/choose-next',
       license='GNU GPL v3',
