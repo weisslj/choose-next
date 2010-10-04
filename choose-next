@@ -43,7 +43,7 @@ def read_dir(path, all_entries=False):
         return []
     lst = os.listdir(path)
     if not all_entries:
-        lst[:] = [os.path.realpath(os.path.join(path,f))
+        lst[:] = [os.path.relpath(os.path.join(path,f), path)
                   for f in lst if not f.startswith('.')]
     return lst
 
@@ -55,7 +55,7 @@ def read_dir_recursive(path, all_entries=False):
     for root, dirs, files in os.walk(path):
         for f in files:
             if all_entries or not f.startswith('.'):
-                lst.append(os.path.realpath(os.path.join(root, f)))
+                lst.append(os.path.relpath(os.path.join(root, f), path))
     return lst
 
 def read_logfile(name):
@@ -99,7 +99,7 @@ def numkey_path(path):
 
 def choose_next(dir, logfile, options, next_file=None):
 
-    logfile_content_list = read_logfile(logfile)
+    logfile_content_list = [os.path.relpath(l, dir) for l in read_logfile(logfile)]
     logfile_content = set(logfile_content_list)
     played_list = logfile_content_list if not options.no_read else []
 
@@ -156,10 +156,11 @@ def choose_next(dir, logfile, options, next_file=None):
                 break
 
     debug('selected file: %s', next_file)
+    next_file_abs = os.path.join(dir, next_file)
 
     retval = 0
     if options.command:
-        next_file_quoted = shellquote(next_file)
+        next_file_quoted = shellquote(next_file_abs)
         try:
             command = options.command % next_file_quoted
         except TypeError:
@@ -168,7 +169,7 @@ def choose_next(dir, logfile, options, next_file=None):
         retval = subprocess.call(command, shell=True)
 
     if verbosity > 0:
-        print next_file
+        print next_file_abs
 
     if retval == 0 and not options.no_write:
         if rewrite_logfile:
