@@ -256,7 +256,6 @@ def main(argv=sys.argv):
         error('error, no directory specified\n'\
                 'Try `%s --help\' for more information.', prog_name)
     dir = args[0]
-    next_files = [os.path.realpath(f) for f in args[1:]]
 
     if not os.path.exists(dir):
         error('error, directory `%s\' doesn\'t exist', dir)
@@ -265,6 +264,7 @@ def main(argv=sys.argv):
         error('error, `%s\' is no directory', dir)
 
     dir = os.path.realpath(dir)
+    next_files = [os.path.relpath(f, dir) for f in args[1:]]
 
     if options.logfile:
         logfile = options.logfile
