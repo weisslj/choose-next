@@ -99,7 +99,7 @@ def numkey_path(path):
 
 def choose_next(dir, logfile, options, next_file=None):
 
-    logfile_content_list = [os.path.relpath(l, dir) for l in read_logfile(logfile)]
+    logfile_content_list = [os.path.relpath(l, dir) if os.path.isabs(l) else l for l in read_logfile(logfile)]
     logfile_content = set(logfile_content_list)
     played_list = logfile_content_list if not options.no_read else []
 
