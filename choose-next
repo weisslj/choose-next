@@ -186,7 +186,10 @@ def choose_next(dir, logfile, options, next_file=None):
 
 
 
-def main(argv=sys.argv):
+def main(argv=None):
+
+    if not argv:
+        argv = sys.argv
 
     global prog_name
     global verbosity
