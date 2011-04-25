@@ -281,7 +281,7 @@ def main(argv=None):
         if os.path.exists(logfile):
             os.unlink(logfile)
         return 0
-        
+
     if options.clear_first or options.clear_last or options.dump:
         lines = read_logfile(logfile)
         if lines and options.clear_first:
