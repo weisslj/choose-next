@@ -45,7 +45,7 @@ def read_dir(path, recursive=False, all_entries=False, exclude=None, include=Non
         paths = files
         if include_directories:
             paths += dirs
-        for f in files:
+        for f in paths:
             if all_entries or not f.startswith('.'):
                 abspath = os.path.join(root, f)
                 if not exclude or ((not fnmatch.fnmatch(abspath, exclude)) or (include and fnmatch.fnmatch(abspath, include))):
