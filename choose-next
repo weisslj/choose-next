@@ -13,6 +13,7 @@ import re
 import locale
 import random
 import subprocess
+import fnmatch
 from optparse import OptionParser, SUPPRESS_HELP
 
 verbosity = 1
@@ -35,27 +36,22 @@ def error(msg, *args, **kwargs):
     print >> sys.stderr, msg
     sys.exit(1)
 
-def read_dir(path, all_entries=False):
-    '''Return a list of paths in directory at path. If all_entries is not
-    true, exclude all entries starting with a dot (.).
-    '''
-    if not os.path.exists(path):
-        return []
-    lst = os.listdir(path)
-    if not all_entries:
-        lst[:] = [os.path.relpath(os.path.join(path,f), path)
-                  for f in lst if not f.startswith('.')]
-    return lst
-
-def read_dir_recursive(path, all_entries=False):
+def read_dir(path, recursive=False, all_entries=False, exclude=None, include=None, include_directories=False):
     '''Return a list of paths in directory at path (recursively). If
     all_entries is not true, exclude all entries starting with a dot (.).
     '''
     lst = []
     for root, dirs, files in os.walk(path):
+        paths = files
+        if include_directories:
+            paths += dirs
         for f in files:
             if all_entries or not f.startswith('.'):
-                lst.append(os.path.relpath(os.path.join(root, f), path))
+                abspath = os.path.join(root, f)
+                if not exclude or ((not fnmatch.fnmatch(abspath, exclude)) or (include and fnmatch.fnmatch(abspath, include))):
+                    lst.append(os.path.relpath(abspath, path))
+        if not recursive:
+            break
     return lst
 
 def read_logfile(name):
@@ -104,10 +100,7 @@ def choose_next(dir, logfile, options, next_file=None):
     played_list = logfile_content_list if not options.no_read else []
 
     played = set(played_list)
-    if options.recursive:
-        available = set(read_dir_recursive(dir))
-    else:
-        available = set(read_dir(dir))
+    available = set(read_dir(dir, recursive=options.recursive, exclude=options.exclude, include=options.include, include_directories=options.include_directories))
     available_list = list(available)
     available_list.sort(key=numkey_path)
     remaining = available - played
@@ -237,6 +230,8 @@ def main(argv=None):
         default=False, help='play last played file')
     parser.add_option('-N', '--no-recursive', dest='recursive', action='store_false',
         help='do not scan DIR recursively')
+    parser.add_option('-d', '--include-directories', action='store_true',
+        default=False, help='also select directories')
     parser.add_option('-n', '--number', type='int', default=1, metavar='NUM',
         help='number of files to select (-1: infinite)')
     parser.add_option('-p', '--prepend', action='store_true',
@@ -251,6 +246,10 @@ def main(argv=None):
         help='be verbose (can be used multiple times)')
     parser.add_option('-w', '--no-write', action='store_true',
         default=False, help='don\'t record selected files to log file')
+    parser.add_option('--exclude', metavar='PATTERN',
+        help='exclude files matching PATTERN')
+    parser.add_option('--include', metavar='PATTERN',
+        help='don\'t exclude files matching PATTERN')
 
     (options, args) = parser.parse_args(argv[1:])
     verbosity = options.verbosity
