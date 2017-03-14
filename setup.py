@@ -2,7 +2,7 @@
 
 """A setuptools based setup module."""
 
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='choose-next',
@@ -18,5 +18,12 @@ setup(
         'Programming Language :: Python :: 2.5',
         'Topic :: Utilities',
     ],
-    scripts=['choose-next'],
+    py_modules=[
+        'choose_next',
+    ],
+    entry_points={
+        'console_scripts': [
+            'choose_next=choose_next:main',
+        ],
+    },
 )
