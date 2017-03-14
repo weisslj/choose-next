@@ -4,7 +4,7 @@
 from distutils.core import setup
 
 setup(name='choose-next',
-      version='1.0',
+      version='1.1',
       description='Chooses a file from a directory. '\
                   'Very handy to re-watch tv series!',
       author=u'Johannes Weißl',
