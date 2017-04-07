@@ -7,6 +7,7 @@
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
 
+from __future__ import print_function
 import sys
 import os
 import re
@@ -16,6 +17,10 @@ import subprocess
 import fnmatch
 from optparse import OptionParser, SUPPRESS_HELP
 
+class Error(Exception):
+    """Aborts program, used in test suite."""
+    pass
+
 verbosity = 1
 
 def debug(msg, *args, **kwargs):
@@ -23,18 +28,13 @@ def debug(msg, *args, **kwargs):
     if verbosity < v:
         return
     msg = msg % args
-    if type(msg) == unicode:
-        pref_enc = locale.getpreferredencoding()
-        msg = msg.encode(pref_enc)
-    print >> sys.stderr, msg
+    if sys.version_info < (3, 0):
+        msg = msg.decode(errors='replace')
+    print(msg, file=sys.stderr)
 
 def error(msg, *args, **kwargs):
-    msg = u'%s: %s' % (prog_name, msg % args)
-    if type(msg) == unicode:
-        pref_enc = locale.getpreferredencoding()
-        msg = msg.encode(pref_enc)
-    print >> sys.stderr, msg
-    sys.exit(1)
+    msg = '%s: %s' % (prog_name, msg % args)
+    raise Error(msg)
 
 def read_dir(path, recursive=False, all_entries=False, exclude=None, include=None, include_directories=False):
     '''Return a list of paths in directory at path (recursively). If
@@ -162,7 +162,10 @@ def choose_next(dir, logfile, options, next_file=None):
         retval = subprocess.call(command, shell=True)
 
     if verbosity > 0:
-        print next_file_abs
+        msg = next_file_abs
+        if sys.version_info < (3, 0):
+            msg = msg.decode(errors='replace')
+        print(msg)
 
     if retval == 0 and not options.no_write:
         if rewrite_logfile:
@@ -177,12 +180,7 @@ def choose_next(dir, logfile, options, next_file=None):
 
     return retval
 
-
-
-def main(argv=None):
-
-    if not argv:
-        argv = sys.argv
+def main_throws(args=None):
 
     global prog_name
     global verbosity
@@ -190,11 +188,7 @@ def main(argv=None):
     locale.setlocale(locale.LC_ALL, '')
 
     usage = 'usage: %prog [OPTION]... DIR [FILE]...'
-    version = u'%prog 1.1\nCopyright (C) 2010-2017 Johannes Weißl\n'\
-        'License GPLv3+: GNU GPL version 3 or later '\
-        '<http://gnu.org/licenses/gpl.html>.\n'\
-        'This is free software: you are free to change and redistribute it.\n'\
-        'There is NO WARRANTY, to the extent permitted by law.'
+    version = '%prog 1.1'
     desc = 'Chooses a file from directory DIR (recursively) and print it\'s '\
         'name to stdout. Afterwards it is appended to a log file. Only '\
         'files which are not in log file are considered for selection.\n'\
@@ -251,7 +245,7 @@ def main(argv=None):
     parser.add_option('--include', metavar='PATTERN',
         help='don\'t exclude files matching PATTERN')
 
-    (options, args) = parser.parse_args(argv[1:])
+    (options, args) = parser.parse_args(args)
     verbosity = options.verbosity
     prog_name = parser.get_prog_name()
     if not args:
@@ -291,7 +285,9 @@ def main(argv=None):
             write_logfile(logfile, lines)
         if options.dump:
             for l in lines:
-                print l
+                if sys.version_info < (3, 0):
+                    l = l.decode(errors='replace')
+                print(l)
         return 0
 
     if options.number >= 0 and options.number <= len(next_files):
@@ -302,12 +298,22 @@ def main(argv=None):
         next_file = next_files[i] if i < len(next_files) else None
         retval = choose_next(dir, logfile, options, next_file)
         if retval != 0:
-            return retval
+            raise Error('command failed')
         i += 1
         if options.number >= 0 and i >= options.number:
             break
 
     return 0
+
+def main(args=None):
+    try:
+        main_throws(args)
+    except Error as exc:
+        msg = str(exc)
+        if sys.version_info < (3, 0):
+            msg = msg.decode(errors='replace')  # pylint: disable=redefined-variable-type
+        print(msg, file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     sys.exit(main())

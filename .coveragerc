@@ -1,0 +1,13 @@
+# .coveragerc to control coverage.py
+[run]
+branch = True
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # This is tested, but does not appear in coverage report:
+    if __name__ == '__main__':
+    # Ignore Windows in coverage report:
+    if os\.name == 'nt':
+    # Ignore Python 2.7 branches:
+    if sys\.version_info < \(3, [0-9]+\):
