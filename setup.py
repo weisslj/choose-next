@@ -15,7 +15,7 @@ setup(
     license='GNU GPL v3',
     classifiers=[
         'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Programming Language :: Python :: 2.5',
+        'Programming Language :: Python :: 2.7',
         'Topic :: Utilities',
     ],
     py_modules=[
