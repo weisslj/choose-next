@@ -333,6 +333,14 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_nonexist + '\n', choose_next_main(self.tmpdir, file_nonexist))
         # TODO: Abort if not all paths are relative to the given directory
 
+    def test_repeat(self):
+        """Check that repeating works even if no remaining files follow."""
+        file_a, file_b, file_c = self.put_files('a', 'b', 'c')
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir, file_c))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir, file_b))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+
     def test_random(self):
         """Check that '-r' and '--random' options work."""
         names = ['{:02d}'.format(i) for i in range(0, 50)]

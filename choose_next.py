@@ -16,6 +16,7 @@ import random
 import subprocess
 import fnmatch
 from optparse import OptionParser, SUPPRESS_HELP
+from itertools import islice, cycle, ifilter
 
 class Error(Exception):
     """Aborts program, used in test suite."""
@@ -141,12 +142,7 @@ def choose_next(dir, logfile, options, next_file=None):
             debug('last selected file: %s', last_file)
             if last_file in available:
                 x = available_list.index(last_file) + 1
-                if x == len(available_list):
-                    x = 0
-        for i in range(x, len(available_list)) + range(0, x):
-            next_file = available_list[i]
-            if next_file in remaining:
-                break
+        next_file = next(ifilter(lambda f: f in remaining, islice(cycle(available_list), x, None)))
 
     debug('selected file: %s', next_file)
     next_file_abs = os.path.join(dir, next_file)

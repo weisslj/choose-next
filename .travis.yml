@@ -5,5 +5,5 @@ install:
  - pip install -r requirements-test.txt
 script:
   - coverage run test_choose_next.py
-  - coverage report --fail-under=99
+  - coverage report --fail-under=100
   - python setup.py -q install
