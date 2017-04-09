@@ -19,8 +19,10 @@ import subprocess
 import fnmatch
 import errno
 from optparse import OptionParser, SUPPRESS_HELP
-from itertools import islice, cycle, ifilter
+from itertools import islice, cycle
 
+if sys.version_info < (3, 0):
+    from itertools import ifilter as filter  # pylint: disable=redefined-builtin
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
 
@@ -161,8 +163,8 @@ def choose_next(directory, logfile, options, next_file=None):
             debug('last selected file: %s', last_file)
             if last_file in available:
                 index = available_list.index(last_file) + 1
-        next_file = next(ifilter(lambda path: path in remaining,
-                                 islice(cycle(available_list), index, None)))
+        next_file = next(filter(lambda path: path in remaining,
+                                islice(cycle(available_list), index, None)))
 
     debug('selected file: %s', next_file)
     next_file_abs = os.path.join(directory, next_file)

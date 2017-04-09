@@ -2,6 +2,7 @@
 
 """A setuptools based setup module."""
 
+from __future__ import unicode_literals
 from setuptools import setup
 
 setup(
@@ -9,7 +10,7 @@ setup(
     version='1.1',
     description='Chooses a file from a directory. '\
                 'Very handy to re-watch tv series!',
-    author=u'Johannes Weißl',
+    author='Johannes Weißl',
     author_email='jargon@molb.org',
     url='https://github.com/weisslj/choose-next',
     license='GPLv3+',
@@ -22,6 +23,12 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.2',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Utilities',
     ],
     py_modules=[
