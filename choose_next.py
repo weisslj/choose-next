@@ -19,7 +19,7 @@ from optparse import OptionParser, SUPPRESS_HELP
 from itertools import islice, cycle, ifilter
 
 class Error(Exception):
-    """Aborts program, used in test suite."""
+    """Abort program, used in test suite."""
     pass
 
 verbosity = 1
