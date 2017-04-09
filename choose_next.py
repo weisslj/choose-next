@@ -3,9 +3,11 @@
 
 # Copyright (C) 2010-2017 Johannes Weißl
 # License GPLv3+:
-# GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+# GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
 # This is free software: you are free to change and redistribute it.
 # There is NO WARRANTY, to the extent permitted by law.
+
+"""Choose a file from a directory. Very handy to re-watch tv series!"""
 
 from __future__ import print_function
 import sys
@@ -15,93 +17,110 @@ import locale
 import random
 import subprocess
 import fnmatch
+import errno
 from optparse import OptionParser, SUPPRESS_HELP
 from itertools import islice, cycle, ifilter
+
+if sys.version_info < (3, 2):
+    os.fsencode = lambda filename: filename
 
 class Error(Exception):
     """Abort program, used in test suite."""
     pass
 
-verbosity = 1
+VERBOSITY = 1
+PROG_NAME = 'choose_next.py'
 
 def debug(msg, *args, **kwargs):
-    v = kwargs['v'] if 'v' in kwargs else 2
-    if verbosity < v:
+    """Output debug message to stderr."""
+    verb = kwargs['v'] if 'v' in kwargs else 2
+    if VERBOSITY < verb:
         return
     msg = msg % args
     if sys.version_info < (3, 0):
         msg = msg.decode(errors='replace')
     print(msg, file=sys.stderr)
 
-def error(msg, *args, **kwargs):
-    msg = '%s: %s' % (prog_name, msg % args)
+def error(msg, *args, **_kwargs):
+    """Raise Error exception."""
+    msg = '%s: %s' % (PROG_NAME, msg % args)
     raise Error(msg)
 
-def read_dir(path, recursive=False, all_entries=False, exclude=None, include=None, include_directories=False):
-    '''Return a list of paths in directory at path (recursively). If
-    all_entries is not true, exclude all entries starting with a dot (.).
-    '''
-    lst = []
+def read_dir(path, recursive=False, exclude=None, include=None, include_directories=False):
+    """Return a list of paths in directory at path (recursively)."""
+    paths = []
     for root, dirs, files in os.walk(path):
-        paths = files
+        names = files
         if include_directories:
-            paths += dirs
-        for f in paths:
-            if all_entries or not f.startswith('.'):
-                abspath = os.path.join(root, f)
-                if not exclude or ((not fnmatch.fnmatch(abspath, exclude)) or (include and fnmatch.fnmatch(abspath, include))):
-                    lst.append(os.path.relpath(abspath, path))
+            names += dirs
+        for name in names:
+            if not name.startswith('.'):
+                abspath = os.path.join(root, name)
+                if not exclude or \
+                        ((not fnmatch.fnmatch(abspath, exclude)) or \
+                        (include and fnmatch.fnmatch(abspath, include))):
+                    paths.append(os.path.relpath(abspath, path))
         if not recursive:
             break
-    return lst
+    return paths
 
-def read_logfile(name):
-    if not os.path.exists(name):
-        return []
-    f = open(name, 'r')
-    lst = [line.rstrip('\n') for line in f]
-    f.close()
-    return lst
+def read_logfile(path):
+    """Return list of logfile entries."""
+    try:
+        with open(path, 'r') as stream:
+            return [line.rstrip('\r\n') for line in stream]
+    except IOError as exc:
+        if exc.errno == errno.ENOENT:
+            return []
+        else:
+            raise Error('error reading logfile: {}'.format(exc.strerror))
 
-def write_logfile(name, lines):
-    f = open(name, 'w')
-    f.write(''.join([e + '\n' for e in lines]))
-    f.close()
+def write_logfile(path, entries):
+    """Write logfile entries to path."""
+    with open(path, 'wb') as stream:
+        stream.write(b''.join([os.fsencode(e) + os.linesep.encode() for e in entries]))
 
-def logfile_append(name, entry, mode='a'):
-    f = open(name, mode)
-    f.write(entry + '\n')
-    f.close()
+def logfile_append(path, entry, mode='ab'):
+    """Append logfile entry to path or rewrite."""
+    with open(path, mode) as stream:
+        stream.write(os.fsencode(entry) + os.linesep.encode())
 
-def logfile_prepend(name, entry, logfile_content):
-    lines = [entry] + logfile_content
-    write_logfile(name, lines)
+def logfile_prepend(path, entry, old_entries):
+    """Prepend logfile entry to path."""
+    entries = [entry] + old_entries
+    write_logfile(path, entries)
 
-def shellquote(s):
-    return "'" + s.replace("'", "'\\''") + "'"
+def shellquote(string):
+    """Return a quoted version of string suitable for a sh-like shell."""
+    return "'" + string.replace("'", "'\\''") + "'"
 
-numkey_regex = re.compile('(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
-def numkey(s):
-    m = numkey_regex.match(s)
-    if m:
-        return float(m.group(1)), locale.strxfrm(m.group(2))
-    return (0.0, locale.strxfrm(s))
+NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
+def numkey(string):
+    """Return a sort key that works for filenames like '23 - foo'."""
+    match = NUMKEY_REGEX.match(string)
+    if match:
+        return float(match.group(1)), locale.strxfrm(match.group(2))
+    return (0.0, locale.strxfrm(string))
 
 def path_split_all(path):
-    '''Return a list of path elements, e.g. 'a/b/..//c' -> ['a', 'c'].'''
+    """Return a list of path elements, e.g. 'a/b/..//c' -> ['a', 'c']."""
     return os.path.normpath(path).split(os.sep)
 
 def numkey_path(path):
+    """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
-def choose_next(dir, logfile, options, next_file=None):
-
-    logfile_content_list = [os.path.relpath(l, dir) if os.path.isabs(l) else l for l in read_logfile(logfile)]
+def choose_next(directory, logfile, options, next_file=None):
+    """Main functionality."""
+    logfile_content_list = [os.path.relpath(l, directory) if os.path.isabs(l) else l
+                            for l in read_logfile(logfile)]
     logfile_content = set(logfile_content_list)
     played_list = logfile_content_list if not options.no_read else []
 
     played = set(played_list)
-    available = set(read_dir(dir, recursive=options.recursive, exclude=options.exclude, include=options.include, include_directories=options.include_directories))
+    available = set(read_dir(directory, recursive=options.recursive, exclude=options.exclude,
+                             include=options.include,
+                             include_directories=options.include_directories))
     available_list = list(available)
     available_list.sort(key=numkey_path)
     remaining = available - played
@@ -114,20 +133,20 @@ def choose_next(dir, logfile, options, next_file=None):
     remaining_list = list(remaining)
     remaining_list.sort(key=numkey_path)
 
-    debug('directory to choose from: %s', dir)
+    debug('directory to choose from: %s', directory)
     debug('logfile: %s', logfile)
     debug('files available: %d', len(available))
-    for f in available_list:
-        debug('%s', f, v=3)
+    for path in available_list:
+        debug('%s', path, v=3)
     debug('files in logfile: %d', len(played))
-    for f in played_list:
-        debug('%s', f, v=3)
+    for path in played_list:
+        debug('%s', path, v=3)
     debug('files remaining for selection: %d', len(remaining))
-    for f in remaining_list:
-        debug('%s', f, v=3)
+    for path in remaining_list:
+        debug('%s', path, v=3)
 
     if not remaining:
-        error('error, no files available in %s', dir)
+        error('error, no files available in %s', directory)
 
     if next_file:
         pass
@@ -136,16 +155,17 @@ def choose_next(dir, logfile, options, next_file=None):
     elif options.random:
         next_file = random.choice(remaining_list)
     else:
-        x = 0
+        index = 0
         if played_list:
             last_file = played_list[-1]
             debug('last selected file: %s', last_file)
             if last_file in available:
-                x = available_list.index(last_file) + 1
-        next_file = next(ifilter(lambda f: f in remaining, islice(cycle(available_list), x, None)))
+                index = available_list.index(last_file) + 1
+        next_file = next(ifilter(lambda path: path in remaining,
+                                 islice(cycle(available_list), index, None)))
 
     debug('selected file: %s', next_file)
-    next_file_abs = os.path.join(dir, next_file)
+    next_file_abs = os.path.join(directory, next_file)
 
     retval = 0
     if options.command:
@@ -157,7 +177,7 @@ def choose_next(dir, logfile, options, next_file=None):
         debug('executing command: %s', command)
         retval = subprocess.call(command, shell=True)
 
-    if verbosity > 0:
+    if VERBOSITY > 0:
         msg = next_file_abs
         if sys.version_info < (3, 0):
             msg = msg.decode(errors='replace')
@@ -171,16 +191,18 @@ def choose_next(dir, logfile, options, next_file=None):
                 lines = logfile_content_list if not rewrite_logfile else []
                 logfile_prepend(logfile, next_file, lines)
             else:
-                mode = 'a' if not rewrite_logfile else 'w'
+                mode = 'ab' if not rewrite_logfile else 'wb'
                 logfile_append(logfile, next_file, mode=mode)
 
     return retval
 
 def main_throws(args=None):
+    """Main function, throws exception on error."""
 
-    global prog_name
-    global verbosity
+    global PROG_NAME
+    global VERBOSITY
 
+    # For locale-specific sorting of filenames:
     locale.setlocale(locale.LC_ALL, '')
 
     usage = 'usage: %prog [OPTION]... DIR [FILE]...'
@@ -194,69 +216,70 @@ def main_throws(args=None):
     logdir = os.getenv('CHOOSE_NEXT_LOGDIR', logdir_default)
 
     parser = OptionParser(usage=usage, version=version, description=desc)
-    parser.set_defaults(verbosity=verbosity)
+    parser.set_defaults(verbosity=VERBOSITY)
     parser.set_defaults(recursive=True)
 
     parser.add_option('-c', '--command', metavar='CMD',
-        help='execute CMD on every selected file; %s in CMD is substituted '\
-                'with the filename, otherwise it is appended to CMD')
+                      help='execute CMD on every selected file; %s in CMD is substituted '\
+                           'with the filename, otherwise it is appended to CMD')
 
     parser.add_option('--clear', action='store_true',
-        default=False, help='remove log file and exit')
+                      default=False, help='remove log file and exit')
     parser.add_option('--clear-first', action='store_true',
-        default=False, help='remove first log file entry and exit')
+                      default=False, help='remove first log file entry and exit')
     parser.add_option('--clear-last', action='store_true',
-        default=False, help='remove last log file entry and exit')
+                      default=False, help='remove last log file entry and exit')
 
     parser.add_option('--dump', action='store_true',
-        default=False, help='dump log file to stdout and exit')
+                      default=False, help='dump log file to stdout and exit')
 
     parser.add_option('-i', '--no-read', action='store_true',
-        default=False, help='don\'t use log file to filter selection')
+                      default=False, help='don\'t use log file to filter selection')
     parser.add_option('-L', '--logfile', metavar='FILE',
-        help='path of log file (default: %s)' % os.path.join(logdir_default,
-        '${DIR//%s/_}' % (os.path.sep.replace('/', '\\/'))))
+                      help='path of log file (default: %s)' % \
+                              os.path.join(logdir_default,
+                                           '${DIR//%s/_}' % (os.path.sep.replace('/', '\\/'))))
     parser.add_option('-l', '--last', action='store_true',
-        default=False, help='play last played file')
+                      default=False, help='play last played file')
     parser.add_option('-N', '--no-recursive', dest='recursive', action='store_false',
-        help='do not scan DIR recursively')
+                      help='do not scan DIR recursively')
     parser.add_option('-d', '--include-directories', action='store_true',
-        default=False, help='also select directories')
+                      default=False, help='also select directories')
     parser.add_option('-n', '--number', type='int', default=1, metavar='NUM',
-        help='number of files to select (-1: infinite)')
+                      help='number of files to select (-1: infinite)')
     parser.add_option('-p', '--prepend', action='store_true',
-        default=False, help='prepend selected filename instead of appending')
+                      default=False, help='prepend selected filename instead of appending')
     parser.add_option('-q', '--quiet', action='store_const', dest='verbosity',
-        const=0, help='don\'t output anything')
+                      const=0, help='don\'t output anything')
     parser.add_option('-R', '--recursive', action='store_true', dest='recursive',
-        help=SUPPRESS_HELP)
+                      help=SUPPRESS_HELP)
     parser.add_option('-r', '--random', action='store_true',
-        default=False, help='choose a random file from DIR')
+                      default=False, help='choose a random file from DIR')
     parser.add_option('-v', '--verbose', action='count', dest='verbosity',
-        help='be verbose (can be used multiple times)')
+                      help='be verbose (can be used multiple times)')
     parser.add_option('-w', '--no-write', action='store_true',
-        default=False, help='don\'t record selected files to log file')
+                      default=False, help='don\'t record selected files to log file')
     parser.add_option('--exclude', metavar='PATTERN',
-        help='exclude files matching PATTERN')
+                      help='exclude files matching PATTERN')
     parser.add_option('--include', metavar='PATTERN',
-        help='don\'t exclude files matching PATTERN')
+                      help='don\'t exclude files matching PATTERN')
 
     (options, args) = parser.parse_args(args)
-    verbosity = options.verbosity
-    prog_name = parser.get_prog_name()
+    VERBOSITY = options.verbosity
+    PROG_NAME = parser.get_prog_name()
     if not args:
         error('error, no directory specified\n'\
-                'Try `%s --help\' for more information.', prog_name)
-    dir = args[0]
+                'Try `%s --help\' for more information.', PROG_NAME)
+    directory = args[0]
 
-    if not os.path.exists(dir):
-        error('error, directory `%s\' doesn\'t exist', dir)
+    if not os.path.exists(directory):
+        error('error, directory `%s\' doesn\'t exist', directory)
 
-    if not os.path.isdir(dir):
-        error('error, `%s\' is no directory', dir)
+    if not os.path.isdir(directory):
+        error('error, `%s\' is no directory', directory)
 
-    dir = os.path.realpath(dir)
-    next_files = [os.path.relpath(f, dir) for f in args[1:]]
+    directory = os.path.realpath(directory)
+    next_files = [os.path.relpath(f, directory) for f in args[1:]]
 
     if options.logfile:
         logfile = options.logfile
@@ -264,7 +287,7 @@ def main_throws(args=None):
         logdir = os.path.expanduser(logdir)
         if not os.path.exists(logdir):
             os.makedirs(logdir)
-        logfile = os.path.join(logdir, dir.replace(os.path.sep, '_'))
+        logfile = os.path.join(logdir, directory.replace(os.path.sep, '_'))
 
     if options.clear:
         if os.path.exists(logfile):
@@ -280,10 +303,10 @@ def main_throws(args=None):
         if options.clear_first or options.clear_last:
             write_logfile(logfile, lines)
         if options.dump:
-            for l in lines:
+            for line in lines:
                 if sys.version_info < (3, 0):
-                    l = l.decode(errors='replace')
-                print(l)
+                    line = line.decode(errors='replace')
+                print(line)
         return 0
 
     if options.number >= 0 and options.number <= len(next_files):
@@ -292,7 +315,7 @@ def main_throws(args=None):
     i = 0
     while True:
         next_file = next_files[i] if i < len(next_files) else None
-        retval = choose_next(dir, logfile, options, next_file)
+        retval = choose_next(directory, logfile, options, next_file)
         if retval != 0:
             raise Error('command failed')
         i += 1
@@ -302,6 +325,7 @@ def main_throws(args=None):
     return 0
 
 def main(args=None):
+    """Main function, exits program on error."""
     try:
         main_throws(args)
     except Error as exc:

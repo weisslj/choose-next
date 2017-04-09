@@ -67,7 +67,7 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def setUp(self):
         """Create temporary directory."""
-        choose_next.verbosity = 1  # FIXME: Get rid of global variable
+        choose_next.VERBOSITY = 1  # FIXME: Get rid of global variable
         self.tmpdir = os.path.realpath(tempfile.mkdtemp())
         self.logdir = os.path.realpath(tempfile.mkdtemp())
         os.environ['CHOOSE_NEXT_LOGDIR'] = self.logdir
@@ -368,6 +368,8 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-L', logfile))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir, '--logfile', logfile))
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        with self.assertRaisesRegex(choose_next.Error, 'error reading logfile'):
+            choose_next_main(self.tmpdir, '--logfile', self.tmpdir)
         shutil.rmtree(logdir)
 
     def test_nonexist_logdir(self):
