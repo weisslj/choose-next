@@ -18,7 +18,7 @@ import random
 import subprocess
 import fnmatch
 import errno
-from optparse import OptionParser, SUPPRESS_HELP
+import argparse
 from itertools import islice, cycle
 
 if sys.version_info < (3, 0):
@@ -109,17 +109,17 @@ def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
-def choose_next(directory, logfile, options, next_file=None):
+def choose_next(directory, logfile, args, next_file=None):
     """Main functionality."""
     logfile_content_list = [os.path.relpath(l, directory) if os.path.isabs(l) else l
                             for l in read_logfile(logfile)]
     logfile_content = set(logfile_content_list)
-    played_list = logfile_content_list if not options.no_read else []
+    played_list = logfile_content_list if not args.no_read else []
 
     played = set(played_list)
-    available = set(read_dir(directory, recursive=options.recursive, exclude=options.exclude,
-                             include=options.include,
-                             include_directories=options.include_directories))
+    available = set(read_dir(directory, recursive=args.recursive, exclude=args.exclude,
+                             include=args.include,
+                             include_directories=args.include_directories))
     available_list = list(available)
     available_list.sort(key=numkey_path)
     remaining = available - played
@@ -132,61 +132,61 @@ def choose_next(directory, logfile, options, next_file=None):
     remaining_list = list(remaining)
     remaining_list.sort(key=numkey_path)
 
-    debug(options.verbosity > 1, 'directory to choose from: {}', directory)
-    debug(options.verbosity > 1, 'logfile: {}', logfile)
-    debug(options.verbosity > 1, 'files available: {}', len(available))
+    debug(args.verbosity > 1, 'directory to choose from: {}', directory)
+    debug(args.verbosity > 1, 'logfile: {}', logfile)
+    debug(args.verbosity > 1, 'files available: {}', len(available))
     for path in available_list:
-        debug(options.verbosity > 2, '{}', path)
-    debug(options.verbosity > 1, 'files in logfile: {}', len(played))
+        debug(args.verbosity > 2, '{}', path)
+    debug(args.verbosity > 1, 'files in logfile: {}', len(played))
     for path in played_list:
-        debug(options.verbosity > 2, '{}', path)
-    debug(options.verbosity > 1, 'files remaining for selection: {}', len(remaining))
+        debug(args.verbosity > 2, '{}', path)
+    debug(args.verbosity > 1, 'files remaining for selection: {}', len(remaining))
     for path in remaining_list:
-        debug(options.verbosity > 2, '{}', path)
+        debug(args.verbosity > 2, '{}', path)
 
     if not remaining:
         error('error, no files available in {}', directory)
 
     if next_file:
         pass
-    elif options.last and played_list:
+    elif args.last and played_list:
         next_file = played_list[-1]
-    elif options.random:
+    elif args.random:
         next_file = random.choice(remaining_list)
     else:
         index = 0
         if played_list:
             last_file = played_list[-1]
-            debug(options.verbosity > 1, 'last selected file: {}', last_file)
+            debug(args.verbosity > 1, 'last selected file: {}', last_file)
             if last_file in available:
                 index = available_list.index(last_file) + 1
         next_file = next(filter(lambda path: path in remaining,
                                 islice(cycle(available_list), index, None)))
 
-    debug(options.verbosity > 1, 'selected file: {}', next_file)
+    debug(args.verbosity > 1, 'selected file: {}', next_file)
     next_file_abs = os.path.join(directory, next_file)
 
     retval = 0
-    if options.command:
+    if args.command:
         next_file_quoted = shellquote(next_file_abs)
         try:
-            command = options.command % next_file_quoted
+            command = args.command % next_file_quoted
         except TypeError:
-            command = options.command + ' ' + next_file_quoted
-        debug(options.verbosity > 1, 'executing command: {}', command)
+            command = args.command + ' ' + next_file_quoted
+        debug(args.verbosity > 1, 'executing command: {}', command)
         retval = subprocess.call(command, shell=True)
 
-    if options.verbosity > 0:
+    if args.verbosity > 0:
         msg = next_file_abs
         if sys.version_info < (3, 0):
             msg = msg.decode(errors='replace')
         print(msg)
 
-    if retval == 0 and not options.no_write:
+    if retval == 0 and not args.no_write:
         if rewrite_logfile:
-            debug(options.verbosity > 1, 'truncating logfile (was full)')
+            debug(args.verbosity > 1, 'truncating logfile (was full)')
         if next_file not in logfile_content or rewrite_logfile:
-            if options.prepend:
+            if args.prepend:
                 lines = logfile_content_list if not rewrite_logfile else []
                 logfile_prepend(logfile, next_file, lines)
             else:
@@ -200,8 +200,7 @@ def main_throws(args=None):
     # For locale-specific sorting of filenames:
     locale.setlocale(locale.LC_ALL, '')
 
-    usage = 'usage: %prog [OPTION]... DIR [FILE]...'
-    version = '%prog 1.1'
+    usage = '%(prog)s [OPTION]... DIR [FILE]...'
     desc = 'Chooses a file from directory DIR (recursively) and print it\'s '\
         'name to stdout. Afterwards it is appended to a log file. Only '\
         'files which are not in log file are considered for selection.\n'\
@@ -210,58 +209,59 @@ def main_throws(args=None):
     logdir_default = '~' + os.path.sep + '.choose_next'
     logdir = os.getenv('CHOOSE_NEXT_LOGDIR', logdir_default)
 
-    parser = OptionParser(usage=usage, version=version, description=desc)
+    parser = argparse.ArgumentParser(usage=usage, description=desc)
     parser.set_defaults(verbosity=1)
     parser.set_defaults(recursive=True)
 
-    parser.add_option('-c', '--command', metavar='CMD',
-                      help='execute CMD on every selected file; %s in CMD is substituted '\
-                           'with the filename, otherwise it is appended to CMD')
+    parser.add_argument('dir', metavar='DIR', help='directory to choose from')
+    parser.add_argument('files', metavar='FILES', nargs='*',
+                        help='XXX')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.1')
+    parser.add_argument('-c', '--command', metavar='CMD',
+                        help='execute CMD on every selected file; %%s in CMD is substituted '\
+                             'with the filename, otherwise it is appended to CMD')
 
-    parser.add_option('--clear', action='store_true',
-                      default=False, help='remove log file and exit')
-    parser.add_option('--clear-first', action='store_true',
-                      default=False, help='remove first log file entry and exit')
-    parser.add_option('--clear-last', action='store_true',
-                      default=False, help='remove last log file entry and exit')
+    parser.add_argument('--clear', action='store_true',
+                        default=False, help='remove log file and exit')
+    parser.add_argument('--clear-first', action='store_true',
+                        default=False, help='remove first log file entry and exit')
+    parser.add_argument('--clear-last', action='store_true',
+                        default=False, help='remove last log file entry and exit')
 
-    parser.add_option('--dump', action='store_true',
-                      default=False, help='dump log file to stdout and exit')
+    parser.add_argument('--dump', action='store_true',
+                        default=False, help='dump log file to stdout and exit')
 
-    parser.add_option('-i', '--no-read', action='store_true',
-                      default=False, help='don\'t use log file to filter selection')
-    parser.add_option('-L', '--logfile', metavar='FILE',
-                      help='path of log file (default: ~/.choose_next/<dirname>)')
-    parser.add_option('-l', '--last', action='store_true',
-                      default=False, help='play last played file')
-    parser.add_option('-N', '--no-recursive', dest='recursive', action='store_false',
-                      help='do not scan DIR recursively')
-    parser.add_option('-d', '--include-directories', action='store_true',
-                      default=False, help='also select directories')
-    parser.add_option('-n', '--number', type='int', default=1, metavar='NUM',
-                      help='number of files to select (-1: infinite)')
-    parser.add_option('-p', '--prepend', action='store_true',
-                      default=False, help='prepend selected filename instead of appending')
-    parser.add_option('-q', '--quiet', action='store_const', dest='verbosity',
-                      const=0, help='don\'t output anything')
-    parser.add_option('-R', '--recursive', action='store_true', dest='recursive',
-                      help=SUPPRESS_HELP)
-    parser.add_option('-r', '--random', action='store_true',
-                      default=False, help='choose a random file from DIR')
-    parser.add_option('-v', '--verbose', action='count', dest='verbosity',
-                      help='be verbose (can be used multiple times)')
-    parser.add_option('-w', '--no-write', action='store_true',
-                      default=False, help='don\'t record selected files to log file')
-    parser.add_option('--exclude', metavar='PATTERN',
-                      help='exclude files matching PATTERN')
-    parser.add_option('--include', metavar='PATTERN',
-                      help='don\'t exclude files matching PATTERN')
+    parser.add_argument('-i', '--no-read', action='store_true',
+                        default=False, help='don\'t use log file to filter selection')
+    parser.add_argument('-L', '--logfile', metavar='FILE',
+                        help='path of log file (default: ~/.choose_next/<dirname>)')
+    parser.add_argument('-l', '--last', action='store_true',
+                        default=False, help='play last played file')
+    parser.add_argument('-N', '--no-recursive', dest='recursive', action='store_false',
+                        help='do not scan DIR recursively')
+    parser.add_argument('-d', '--include-directories', action='store_true',
+                        default=False, help='also select directories')
+    parser.add_argument('-n', '--number', type=int, default=1, metavar='NUM',
+                        help='number of files to select (-1: infinite)')
+    parser.add_argument('-p', '--prepend', action='store_true',
+                        default=False, help='prepend selected filename instead of appending')
+    parser.add_argument('-q', '--quiet', action='store_const', dest='verbosity',
+                        const=0, help='don\'t output anything')
+    parser.add_argument('-R', '--recursive', action='store_true', dest='recursive',
+                        help=argparse.SUPPRESS)
+    parser.add_argument('-r', '--random', action='store_true',
+                        default=False, help='choose a random file from DIR')
+    parser.add_argument('-v', '--verbose', action='count', dest='verbosity',
+                        help='be verbose (can be used multiple times)')
+    parser.add_argument('-w', '--no-write', action='store_true',
+                        default=False, help='don\'t record selected files to log file')
+    parser.add_argument('--exclude', metavar='PATTERN',
+                        help='exclude files matching PATTERN')
+    parser.add_argument('--include', metavar='PATTERN',
+                        help='don\'t exclude files matching PATTERN')
 
-    (options, args) = parser.parse_args(args)
-    if not args:
-        error('error, no directory specified\n'\
-                'Try `{} --help\' for more information.', parser.get_prog_name())
-    directory = args[0]
+    args = parser.parse_args(args)
+    directory = args.dir
 
     if not os.path.exists(directory):
         error('error, directory `{}\' doesn\'t exist', directory)
@@ -270,47 +270,47 @@ def main_throws(args=None):
         error('error, `{}\' is no directory', directory)
 
     directory = os.path.realpath(directory)
-    next_files = [os.path.relpath(f, directory) for f in args[1:]]
+    next_files = [os.path.relpath(f, directory) for f in args.files]
 
-    if options.logfile:
-        logfile = options.logfile
+    if args.logfile:
+        logfile = args.logfile
     else:
         logdir = os.path.expanduser(logdir)
         if not os.path.exists(logdir):
             os.makedirs(logdir)
         logfile = os.path.join(logdir, directory.replace(os.path.sep, '_'))
 
-    if options.clear:
+    if args.clear:
         if os.path.exists(logfile):
             os.unlink(logfile)
         return 0
 
-    if options.clear_first or options.clear_last or options.dump:
+    if args.clear_first or args.clear_last or args.dump:
         lines = read_logfile(logfile)
-        if lines and options.clear_first:
+        if lines and args.clear_first:
             del lines[0]
-        if lines and options.clear_last:
+        if lines and args.clear_last:
             del lines[-1]
-        if options.clear_first or options.clear_last:
+        if args.clear_first or args.clear_last:
             write_logfile(logfile, lines)
-        if options.dump:
+        if args.dump:
             for line in lines:
                 if sys.version_info < (3, 0):
                     line = line.decode(errors='replace')
                 print(line)
         return 0
 
-    if options.number >= 0 and options.number <= len(next_files):
-        options.number = len(next_files)
+    if args.number >= 0 and args.number <= len(next_files):
+        args.number = len(next_files)
 
     i = 0
     while True:
         next_file = next_files[i] if i < len(next_files) else None
-        retval = choose_next(directory, logfile, options, next_file)
+        retval = choose_next(directory, logfile, args, next_file)
         if retval != 0:
             raise Error('command failed')
         i += 1
-        if options.number >= 0 and i >= options.number:
+        if args.number >= 0 and i >= args.number:
             break
 
     return 0

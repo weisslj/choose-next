@@ -141,8 +141,11 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def test_nodirectory_specified(self):
         """Raise error if directory is not specified."""
-        with self.assertRaisesRegex(choose_next.Error, 'no directory specified'):
+        original_sys_exit = sys.exit
+        sys.exit = fake_sys_exit
+        with self.assertRaisesRegex(Exception, r'^sys.exit\(2\)$'):
             choose_next_main()
+        sys.exit = original_sys_exit
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
@@ -159,7 +162,7 @@ class ChooseNextTestCase(unittest.TestCase):
         """Check that '-h' and '--help' options work."""
         help_output1 = choose_next_external('-h')
         help_output2 = choose_next_external('--help')
-        self.assertRegex(help_output1, '^Usage: choose_next')
+        self.assertRegex(help_output1, '^usage: choose_next')
         self.assertEqual(help_output1, help_output2)
 
     def test_version(self):
