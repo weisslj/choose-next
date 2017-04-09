@@ -266,8 +266,8 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual('b\n', choose_next_main(self.tmpdir, '--dump'))
         self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
 
-    def test_recursive(self):
-        """Check that recursive directory reading works."""
+    def test_recursive_default(self):
+        """Check that recursive directory reading works by default."""
         file_a, file_b, file_c, file_d = self.put_files('x/y/a', 'x/y/b', 'y/c', 'z')
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
@@ -280,6 +280,15 @@ class ChooseNextTestCase(unittest.TestCase):
         _unused, _unused, _unused, file_d = self.put_files('x/y/a', 'x/y/b', 'y/c', 'z')
         self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir, '-N'))
         self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir, '--no-recursive'))
+
+    def test_recursive(self):
+        """Check that '-R' and '--recursive' options work."""
+        file_a, file_b, file_c, file_d = self.put_files('x/y/a', 'x/y/b', 'y/c', 'z')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-N', '--recursive'))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir, '-N', '-R'))
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir, '--recursive'))
+        self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir, '-R'))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-R'))
 
     def test_prepend(self):
         """Check that '-p' and '--prepend' options work."""
