@@ -276,9 +276,9 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
 
     def test_no_recursive(self):
-        """Check that the '--no-recursive' option works."""
+        """Check that '-N' and '--no-recursive' options work."""
         _unused, _unused, _unused, file_d = self.put_files('x/y/a', 'x/y/b', 'y/c', 'z')
-        self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir, '--no-recursive'))
+        self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir, '-N'))
         self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir, '--no-recursive'))
 
     def test_prepend(self):
