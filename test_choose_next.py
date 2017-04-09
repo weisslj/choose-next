@@ -67,7 +67,6 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def setUp(self):
         """Create temporary directory."""
-        choose_next.VERBOSITY = 1  # FIXME: Get rid of global variable
         self.tmpdir = os.path.realpath(tempfile.mkdtemp())
         self.logdir = os.path.realpath(tempfile.mkdtemp())
         os.environ['CHOOSE_NEXT_LOGDIR'] = self.logdir

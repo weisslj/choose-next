@@ -30,13 +30,9 @@ class Error(Exception):
     """Abort program, used in test suite."""
     pass
 
-VERBOSITY = 1
-PROG_NAME = 'choose_next.py'
-
-def debug(msg, *args, **kwargs):
+def debug(do_show, msg, *args, **kwargs):
     """Output debug message to stderr."""
-    verb = kwargs['v'] if 'v' in kwargs else 2
-    if VERBOSITY < verb:
+    if not do_show:
         return
     msg = msg.format(*args, **kwargs)
     if sys.version_info < (3, 0):
@@ -45,7 +41,8 @@ def debug(msg, *args, **kwargs):
 
 def error(msg, *args, **kwargs):
     """Raise Error exception."""
-    msg = '{}: {}'.format(PROG_NAME, msg.format(*args, **kwargs))
+    prog_name = os.path.basename(sys.argv[0])
+    msg = '{}: {}'.format(prog_name, msg.format(*args, **kwargs))
     raise Error(msg)
 
 def read_dir(path, recursive=False, exclude=None, include=None, include_directories=False):
@@ -135,17 +132,17 @@ def choose_next(directory, logfile, options, next_file=None):
     remaining_list = list(remaining)
     remaining_list.sort(key=numkey_path)
 
-    debug('directory to choose from: {}', directory)
-    debug('logfile: {}', logfile)
-    debug('files available: {}', len(available))
+    debug(options.verbosity > 1, 'directory to choose from: {}', directory)
+    debug(options.verbosity > 1, 'logfile: {}', logfile)
+    debug(options.verbosity > 1, 'files available: {}', len(available))
     for path in available_list:
-        debug('{}', path, v=3)
-    debug('files in logfile: {}', len(played))
+        debug(options.verbosity > 2, '{}', path)
+    debug(options.verbosity > 1, 'files in logfile: {}', len(played))
     for path in played_list:
-        debug('{}', path, v=3)
-    debug('files remaining for selection: {}', len(remaining))
+        debug(options.verbosity > 2, '{}', path)
+    debug(options.verbosity > 1, 'files remaining for selection: {}', len(remaining))
     for path in remaining_list:
-        debug('{}', path, v=3)
+        debug(options.verbosity > 2, '{}', path)
 
     if not remaining:
         error('error, no files available in {}', directory)
@@ -160,13 +157,13 @@ def choose_next(directory, logfile, options, next_file=None):
         index = 0
         if played_list:
             last_file = played_list[-1]
-            debug('last selected file: {}', last_file)
+            debug(options.verbosity > 1, 'last selected file: {}', last_file)
             if last_file in available:
                 index = available_list.index(last_file) + 1
         next_file = next(filter(lambda path: path in remaining,
                                 islice(cycle(available_list), index, None)))
 
-    debug('selected file: {}', next_file)
+    debug(options.verbosity > 1, 'selected file: {}', next_file)
     next_file_abs = os.path.join(directory, next_file)
 
     retval = 0
@@ -176,10 +173,10 @@ def choose_next(directory, logfile, options, next_file=None):
             command = options.command % next_file_quoted
         except TypeError:
             command = options.command + ' ' + next_file_quoted
-        debug('executing command: {}', command)
+        debug(options.verbosity > 1, 'executing command: {}', command)
         retval = subprocess.call(command, shell=True)
 
-    if VERBOSITY > 0:
+    if options.verbosity > 0:
         msg = next_file_abs
         if sys.version_info < (3, 0):
             msg = msg.decode(errors='replace')
@@ -187,7 +184,7 @@ def choose_next(directory, logfile, options, next_file=None):
 
     if retval == 0 and not options.no_write:
         if rewrite_logfile:
-            debug('truncating logfile (was full)')
+            debug(options.verbosity > 1, 'truncating logfile (was full)')
         if next_file not in logfile_content or rewrite_logfile:
             if options.prepend:
                 lines = logfile_content_list if not rewrite_logfile else []
@@ -200,10 +197,6 @@ def choose_next(directory, logfile, options, next_file=None):
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
-
-    global PROG_NAME
-    global VERBOSITY
-
     # For locale-specific sorting of filenames:
     locale.setlocale(locale.LC_ALL, '')
 
@@ -218,7 +211,7 @@ def main_throws(args=None):
     logdir = os.getenv('CHOOSE_NEXT_LOGDIR', logdir_default)
 
     parser = OptionParser(usage=usage, version=version, description=desc)
-    parser.set_defaults(verbosity=VERBOSITY)
+    parser.set_defaults(verbosity=1)
     parser.set_defaults(recursive=True)
 
     parser.add_option('-c', '--command', metavar='CMD',
@@ -265,11 +258,9 @@ def main_throws(args=None):
                       help='don\'t exclude files matching PATTERN')
 
     (options, args) = parser.parse_args(args)
-    VERBOSITY = options.verbosity
-    PROG_NAME = parser.get_prog_name()
     if not args:
         error('error, no directory specified\n'\
-                'Try `{} --help\' for more information.', PROG_NAME)
+                'Try `{} --help\' for more information.', parser.get_prog_name())
     directory = args[0]
 
     if not os.path.exists(directory):
