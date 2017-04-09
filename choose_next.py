@@ -38,14 +38,14 @@ def debug(msg, *args, **kwargs):
     verb = kwargs['v'] if 'v' in kwargs else 2
     if VERBOSITY < verb:
         return
-    msg = msg % args
+    msg = msg.format(*args, **kwargs)
     if sys.version_info < (3, 0):
         msg = msg.decode(errors='replace')
     print(msg, file=sys.stderr)
 
-def error(msg, *args, **_kwargs):
+def error(msg, *args, **kwargs):
     """Raise Error exception."""
-    msg = '%s: %s' % (PROG_NAME, msg % args)
+    msg = '{}: {}'.format(PROG_NAME, msg.format(*args, **kwargs))
     raise Error(msg)
 
 def read_dir(path, recursive=False, exclude=None, include=None, include_directories=False):
@@ -135,20 +135,20 @@ def choose_next(directory, logfile, options, next_file=None):
     remaining_list = list(remaining)
     remaining_list.sort(key=numkey_path)
 
-    debug('directory to choose from: %s', directory)
-    debug('logfile: %s', logfile)
-    debug('files available: %d', len(available))
+    debug('directory to choose from: {}', directory)
+    debug('logfile: {}', logfile)
+    debug('files available: {}', len(available))
     for path in available_list:
-        debug('%s', path, v=3)
-    debug('files in logfile: %d', len(played))
+        debug('{}', path, v=3)
+    debug('files in logfile: {}', len(played))
     for path in played_list:
-        debug('%s', path, v=3)
-    debug('files remaining for selection: %d', len(remaining))
+        debug('{}', path, v=3)
+    debug('files remaining for selection: {}', len(remaining))
     for path in remaining_list:
-        debug('%s', path, v=3)
+        debug('{}', path, v=3)
 
     if not remaining:
-        error('error, no files available in %s', directory)
+        error('error, no files available in {}', directory)
 
     if next_file:
         pass
@@ -160,13 +160,13 @@ def choose_next(directory, logfile, options, next_file=None):
         index = 0
         if played_list:
             last_file = played_list[-1]
-            debug('last selected file: %s', last_file)
+            debug('last selected file: {}', last_file)
             if last_file in available:
                 index = available_list.index(last_file) + 1
         next_file = next(filter(lambda path: path in remaining,
                                 islice(cycle(available_list), index, None)))
 
-    debug('selected file: %s', next_file)
+    debug('selected file: {}', next_file)
     next_file_abs = os.path.join(directory, next_file)
 
     retval = 0
@@ -176,7 +176,7 @@ def choose_next(directory, logfile, options, next_file=None):
             command = options.command % next_file_quoted
         except TypeError:
             command = options.command + ' ' + next_file_quoted
-        debug('executing command: %s', command)
+        debug('executing command: {}', command)
         retval = subprocess.call(command, shell=True)
 
     if VERBOSITY > 0:
@@ -238,9 +238,7 @@ def main_throws(args=None):
     parser.add_option('-i', '--no-read', action='store_true',
                       default=False, help='don\'t use log file to filter selection')
     parser.add_option('-L', '--logfile', metavar='FILE',
-                      help='path of log file (default: %s)' % \
-                              os.path.join(logdir_default,
-                                           '${DIR//%s/_}' % (os.path.sep.replace('/', '\\/'))))
+                      help='path of log file (default: ~/.choose_next/<dirname>)')
     parser.add_option('-l', '--last', action='store_true',
                       default=False, help='play last played file')
     parser.add_option('-N', '--no-recursive', dest='recursive', action='store_false',
@@ -271,14 +269,14 @@ def main_throws(args=None):
     PROG_NAME = parser.get_prog_name()
     if not args:
         error('error, no directory specified\n'\
-                'Try `%s --help\' for more information.', PROG_NAME)
+                'Try `{} --help\' for more information.', PROG_NAME)
     directory = args[0]
 
     if not os.path.exists(directory):
-        error('error, directory `%s\' doesn\'t exist', directory)
+        error('error, directory `{}\' doesn\'t exist', directory)
 
     if not os.path.isdir(directory):
-        error('error, `%s\' is no directory', directory)
+        error('error, `{}\' is no directory', directory)
 
     directory = os.path.realpath(directory)
     next_files = [os.path.relpath(f, directory) for f in args[1:]]
