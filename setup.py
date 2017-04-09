@@ -32,4 +32,5 @@ setup(
             'choose_next=choose_next:main',
         ],
     },
+    test_suite='test_choose_next',
 )
