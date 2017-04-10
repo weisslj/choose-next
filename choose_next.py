@@ -27,12 +27,13 @@ if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
 
 MAKEDIRS = os.makedirs
-if sys.version_info < (3, 2):
+if sys.version_info < (3, 4):
     def makedirs_compat(name, exist_ok=False, **kwargs):
-        """Compatibility function with Python 3.2 os.makedirs()."""
+        """Compatibility function with Python 3.4 os.makedirs()."""
         try:
             os.makedirs(name, **kwargs)
         except OSError:
+            # This is broken in Python 3.2 and 3.3, cf. https://bugs.python.org/issue13498
             if not exist_ok or not os.path.isdir(name):
                 raise
     MAKEDIRS = makedirs_compat
