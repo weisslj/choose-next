@@ -72,7 +72,7 @@ def read_logfile(path):
         if exc.errno == errno.ENOENT:
             return []
         else:
-            raise Error('error reading logfile: {}'.format(exc.strerror))
+            raise Error('error reading logfile {}: {}'.format(path, exc.strerror))
 
 def write_logfile(path, entries):
     """Write logfile entries to path."""
