@@ -420,7 +420,6 @@ class ChooseNextTestCase(unittest.TestCase):
     def test_hidden(self):
         """Check that hidden files are not chosen."""
         file_a, _unused, file_c = self.put_files('a', '.b', 'c')
-        #file_a, _unused, file_c = [self.put_file(name) for name in ('a', '.b', 'c')]
         _unused, file_e = self.put_dirs('.d', 'e')
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-d'))
         self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir, '-d'))
