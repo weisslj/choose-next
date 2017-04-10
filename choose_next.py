@@ -51,15 +51,9 @@ def debug(do_show, msg, *args, **kwargs):
         msg = msg.decode(errors='replace')
     print(msg, file=sys.stderr)
 
-def error(msg, *args, **kwargs):
-    """Raise Error exception."""
-    prog_name = os.path.basename(sys.argv[0])
-    msg = '{}: {}'.format(prog_name, msg.format(*args, **kwargs))
-    raise Error(msg)
-
 def read_dir_error(exc):
     """Raise Error exception on read_dir error."""
-    error('error listing {}: {}', exc.filename, exc.strerror)
+    raise Error('error listing {}: {}'.format(exc.filename, exc.strerror))
 
 def read_dir(path, recursive=False, exclude=None, include=None, include_directories=False):
     """Return a list of paths in directory at path (recursively)."""
@@ -161,7 +155,7 @@ def choose_next(directory, logfile, args, next_file=None):
         debug(args.verbosity > 2, '{}', path)
 
     if not remaining:
-        error('error, no files available in {}', directory)
+        raise Error('error, no files available in {}'.format(directory))
 
     if next_file:
         pass
@@ -289,7 +283,7 @@ def main_throws(args=None):
         try:
             MAKEDIRS(logdir, exist_ok=True)
         except OSError as exc:
-            error('error creating logdir {}: {}', logdir, exc.strerror)
+            raise Error('error creating logdir {}: {}'.format(logdir, exc.strerror))
         logfile = os.path.join(logdir, directory.replace(os.path.sep, '_'))
 
     if args.clear:
@@ -297,7 +291,7 @@ def main_throws(args=None):
             os.unlink(logfile)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                error('error removing logfile {}: {}', logfile, exc.strerror)
+                raise Error('error removing logfile {}: {}'.format(logfile, exc.strerror))
         return 0
 
     if args.clear_first or args.clear_last or args.dump:
@@ -335,7 +329,8 @@ def main(args=None):
     try:
         main_throws(args)
     except Error as exc:
-        msg = str(exc)
+        prog_name = os.path.basename(sys.argv[0])
+        msg = '{}: {}'.format(prog_name, str(exc))
         if sys.version_info < (3, 0):
             msg = msg.decode(errors='replace')  # pylint: disable=redefined-variable-type
         print(msg, file=sys.stderr)
