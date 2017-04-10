@@ -17,6 +17,7 @@ import tempfile
 import shutil
 from io import StringIO
 import subprocess
+import stat
 
 import choose_next
 
@@ -149,13 +150,13 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def test_nonexisting(self):
         """Raise error if directory does not exist."""
-        with self.assertRaisesRegex(choose_next.Error, 'doesn\'t exist'):
+        with self.assertRaisesRegex(choose_next.Error, 'error listing'):
             choose_next_main(os.path.join(self.tmpdir, 'nonexist'))
 
     def test_nodirectory(self):
         """Raise error if path is no directory."""
         self.put_files('nodirectory')
-        with self.assertRaisesRegex(choose_next.Error, 'is no directory'):
+        with self.assertRaisesRegex(choose_next.Error, 'error listing'):
             choose_next_main(os.path.join(self.tmpdir, 'nodirectory'))
 
     def test_help(self):
@@ -250,6 +251,21 @@ class ChooseNextTestCase(unittest.TestCase):
         choose_next_main(self.tmpdir, '--clear')
         self.assertEqual('', choose_next_main(self.tmpdir, '--dump'))
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+
+    def test_clear_error(self):
+        """Check that the '--clear' option can handle errors."""
+        file_a, _unused, _unused = self.put_files('a', 'b', 'c')
+        logdir = tempfile.mkdtemp()
+        logfile = os.path.join(logdir, 'logfile')
+        choose_next_main(self.tmpdir, '--logfile', logfile, '--clear')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '--logfile', logfile))
+        os.chmod(logfile, stat.S_IREAD)
+        os.chmod(logdir, stat.S_IREAD)
+        with self.assertRaisesRegex(choose_next.Error, 'error removing logfile'):
+            choose_next_main(self.tmpdir, '--logfile', logfile, '--clear')
+        os.chmod(logdir, stat.S_IWRITE | stat.S_IEXEC | stat.S_IREAD)
+        os.chmod(logfile, stat.S_IWRITE | stat.S_IREAD)
+        shutil.rmtree(logdir)
 
     def test_clear_last(self):
         """Check that the '--clear-last' option works."""
@@ -390,6 +406,17 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
 
+    def test_nonexist_logdir_error(self):
+        """Check handling of error when creating logdir for coverage."""
+        shutil.rmtree(self.logdir)
+        with open(self.logdir, 'w') as stream:
+            stream.write('logdir\n')
+        self.put_files('a', 'b')
+        with self.assertRaisesRegex(choose_next.Error, 'error creating logdir'):
+            choose_next_main(self.tmpdir)
+        os.unlink(self.logdir)
+        os.makedirs(self.logdir)
+
     def test_hidden(self):
         """Check that hidden files are not chosen."""
         file_a, _unused, file_c = self.put_files('a', '.b', 'c')
@@ -409,9 +436,9 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def test_multibyte_error(self):
         """Check that multibyte error message works."""
-        with self.assertRaisesRegex(choose_next.Error, 'doesn\'t exist'):
+        with self.assertRaisesRegex(choose_next.Error, 'error listing'):
             choose_next_main(os.path.join(self.tmpdir, '\xc3\xa4'))
-        with self.assertRaisesRegex(choose_next.Error, 'doesn\'t exist'):
+        with self.assertRaisesRegex(choose_next.Error, 'error listing'):
             choose_next_main(os.path.join(self.tmpdir, '\xe4'))
 
     # TODO: logfile clash '/' <-> '_'

@@ -26,6 +26,17 @@ if sys.version_info < (3, 0):
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
 
+MAKEDIRS = os.makedirs
+if sys.version_info < (3, 2):
+    def makedirs_compat(name, exist_ok=False, **kwargs):
+        """Compatibility function with Python 3.2 os.makedirs()."""
+        try:
+            os.makedirs(name, **kwargs)
+        except OSError:
+            if not exist_ok or not os.path.isdir(name):
+                raise
+    MAKEDIRS = makedirs_compat
+
 class Error(Exception):
     """Abort program, used in test suite."""
     pass
@@ -45,10 +56,14 @@ def error(msg, *args, **kwargs):
     msg = '{}: {}'.format(prog_name, msg.format(*args, **kwargs))
     raise Error(msg)
 
+def read_dir_error(exc):
+    """Raise Error exception on read_dir error."""
+    error('error listing {}: {}', exc.filename, exc.strerror)
+
 def read_dir(path, recursive=False, exclude=None, include=None, include_directories=False):
     """Return a list of paths in directory at path (recursively)."""
     paths = []
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(path, onerror=read_dir_error):
         names = files
         if include_directories:
             names += dirs
@@ -263,12 +278,6 @@ def main_throws(args=None):
     args = parser.parse_args(args)
     directory = args.dir
 
-    if not os.path.exists(directory):
-        error('error, directory `{}\' doesn\'t exist', directory)
-
-    if not os.path.isdir(directory):
-        error('error, `{}\' is no directory', directory)
-
     directory = os.path.realpath(directory)
     next_files = [os.path.relpath(f, directory) for f in args.files]
 
@@ -276,13 +285,18 @@ def main_throws(args=None):
         logfile = args.logfile
     else:
         logdir = os.path.expanduser(logdir)
-        if not os.path.exists(logdir):
-            os.makedirs(logdir)
+        try:
+            MAKEDIRS(logdir, exist_ok=True)
+        except OSError as exc:
+            error('error creating logdir {}: {}', logdir, exc.strerror)
         logfile = os.path.join(logdir, directory.replace(os.path.sep, '_'))
 
     if args.clear:
-        if os.path.exists(logfile):
+        try:
             os.unlink(logfile)
+        except OSError as exc:
+            if exc.errno != errno.ENOENT:
+                error('error removing logfile {}: {}', logfile, exc.strerror)
         return 0
 
     if args.clear_first or args.clear_last or args.dump:
