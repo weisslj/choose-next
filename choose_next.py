@@ -124,15 +124,15 @@ def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
-def choose_next(directory, logfile, args, next_file=None):
+def choose_next(args, next_file=None):
     """Main functionality."""
-    logfile_content_list = [os.path.relpath(l, directory) if os.path.isabs(l) else l
-                            for l in read_logfile(logfile)]
+    logfile_content_list = [os.path.relpath(l, args.dir) if os.path.isabs(l) else l
+                            for l in read_logfile(args.logfile)]
     logfile_content = set(logfile_content_list)
     played_list = logfile_content_list if not args.no_read else []
 
     played = set(played_list)
-    available = set(read_dir(directory, recursive=args.recursive, exclude=args.exclude,
+    available = set(read_dir(args.dir, recursive=args.recursive, exclude=args.exclude,
                              include=args.include,
                              include_directories=args.include_directories))
     available_list = list(available)
@@ -147,8 +147,8 @@ def choose_next(directory, logfile, args, next_file=None):
     remaining_list = list(remaining)
     remaining_list.sort(key=numkey_path)
 
-    debug(args.verbosity > 1, 'directory to choose from: {}', directory)
-    debug(args.verbosity > 1, 'logfile: {}', logfile)
+    debug(args.verbosity > 1, 'directory to choose from: {}', args.dir)
+    debug(args.verbosity > 1, 'logfile: {}', args.logfile)
     debug(args.verbosity > 1, 'files available: {}', len(available))
     for path in available_list:
         debug(args.verbosity > 2, '{}', path)
@@ -160,7 +160,7 @@ def choose_next(directory, logfile, args, next_file=None):
         debug(args.verbosity > 2, '{}', path)
 
     if not remaining:
-        raise Error('error, no files available in {}'.format(directory))
+        raise Error('error, no files available in {}'.format(args.dir))
 
     if next_file:
         pass
@@ -179,7 +179,7 @@ def choose_next(directory, logfile, args, next_file=None):
                                 islice(cycle(available_list), index, None)))
 
     debug(args.verbosity > 1, 'selected file: {}', next_file)
-    next_file_abs = os.path.join(directory, next_file)
+    next_file_abs = os.path.join(args.dir, next_file)
 
     retval = 0
     if args.command:
@@ -203,10 +203,10 @@ def choose_next(directory, logfile, args, next_file=None):
         if next_file not in logfile_content or rewrite_logfile:
             if args.prepend:
                 lines = logfile_content_list if not rewrite_logfile else []
-                logfile_prepend(logfile, next_file, lines)
+                logfile_prepend(args.logfile, next_file, lines)
             else:
                 mode = 'ab' if not rewrite_logfile else 'wb'
-                logfile_append(logfile, next_file, mode=mode)
+                logfile_append(args.logfile, next_file, mode=mode)
 
     return retval
 
@@ -276,37 +276,33 @@ def main_throws(args=None):
                         help='don\'t exclude files matching PATTERN')
 
     args = parser.parse_args(args)
-    directory = args.dir
+    args.dir = os.path.realpath(args.dir)
+    args.files[:] = [os.path.relpath(path, args.dir) for path in args.files]
 
-    directory = os.path.realpath(directory)
-    next_files = [os.path.relpath(f, directory) for f in args.files]
-
-    if args.logfile:
-        logfile = args.logfile
-    else:
+    if args.logfile is None:
         logdir = os.path.expanduser(logdir)
         try:
             MAKEDIRS(logdir, exist_ok=True)
         except OSError as exc:
             raise Error('error creating logdir {}: {}'.format(logdir, exc.strerror))
-        logfile = os.path.join(logdir, directory.replace(os.path.sep, '_'))
+        args.logfile = os.path.join(logdir, args.dir.replace(os.path.sep, '_'))
 
     if args.clear:
         try:
-            os.unlink(logfile)
+            os.unlink(args.logfile)
         except OSError as exc:
             if exc.errno != errno.ENOENT:
-                raise Error('error removing logfile {}: {}'.format(logfile, exc.strerror))
+                raise Error('error removing logfile {}: {}'.format(args.logfile, exc.strerror))
         return 0
 
     if args.clear_first or args.clear_last or args.dump:
-        lines = read_logfile(logfile)
+        lines = read_logfile(args.logfile)
         if lines and args.clear_first:
             del lines[0]
         if lines and args.clear_last:
             del lines[-1]
         if args.clear_first or args.clear_last:
-            write_logfile(logfile, lines)
+            write_logfile(args.logfile, lines)
         if args.dump:
             for line in lines:
                 if sys.version_info < (3, 0):
@@ -314,13 +310,13 @@ def main_throws(args=None):
                 print(line)
         return 0
 
-    if args.number >= 0 and args.number <= len(next_files):
-        args.number = len(next_files)
+    if args.number >= 0 and args.number <= len(args.files):
+        args.number = len(args.files)
 
     i = 0
     while True:
-        next_file = next_files[i] if i < len(next_files) else None
-        retval = choose_next(directory, logfile, args, next_file)
+        next_file = args.files[i] if i < len(args.files) else None
+        retval = choose_next(args, next_file)
         if retval != 0:
             raise Error('command failed')
         i += 1
