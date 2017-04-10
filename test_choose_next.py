@@ -428,10 +428,9 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def test_hidden_recursive(self):
         """Check that hidden files are not chosen in recursive mode."""
-        # FIXME: Bug!
-        # file_a, file_b, file_c = self.put_files('x/y/a', 'x/.y/b', 'x/y/.c')
-        # self.assertEqual(a + '\n', choose_next_main(self.tmpdir, '-r'))
-        # self.assertEqual(a + '\n', choose_next_main(self.tmpdir, '-r'))
+        file_a, _unused, _unused = self.put_files('x/y/a', 'x/.y/b', 'x/y/.c')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-r'))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-r'))
 
     def test_multibyte_error(self):
         """Check that multibyte error message works."""

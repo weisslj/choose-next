@@ -55,20 +55,25 @@ def read_dir_error(exc):
     """Raise Error exception on read_dir error."""
     raise Error('error listing {}: {}'.format(exc.filename, exc.strerror))
 
+def remove_hidden(names):
+    """Remove entries starting with a dot (.) from list of basenames."""
+    names[:] = [name for name in names if not name.startswith('.')]
+
 def read_dir(path, recursive=False, exclude=None, include=None, include_directories=False):
     """Return a list of paths in directory at path (recursively)."""
     paths = []
     for root, dirs, files in os.walk(path, onerror=read_dir_error):
+        remove_hidden(dirs)
+        remove_hidden(files)
         names = files
         if include_directories:
             names += dirs
         for name in names:
-            if not name.startswith('.'):
-                abspath = os.path.join(root, name)
-                if not exclude or \
-                        ((not fnmatch.fnmatch(abspath, exclude)) or \
-                        (include and fnmatch.fnmatch(abspath, include))):
-                    paths.append(os.path.relpath(abspath, path))
+            abspath = os.path.join(root, name)
+            if not exclude or \
+                    ((not fnmatch.fnmatch(abspath, exclude)) or \
+                    (include and fnmatch.fnmatch(abspath, include))):
+                paths.append(os.path.relpath(abspath, path))
         if not recursive:
             break
     return paths
