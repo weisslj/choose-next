@@ -54,6 +54,18 @@ def choose_next_external(*args):
     return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT, shell=shell,
                                    universal_newlines=True)
 
+def put_file(dirname, filename):
+    """Put file into directory and return absolute path."""
+    path = os.path.join(dirname, filename)
+    mkdir_p(os.path.dirname(path))
+    with open(path, 'w') as stream:
+        stream.write(filename)
+    return path
+
+def put_files(dirname, *filenames):
+    """Put files into directory and return absolute paths."""
+    return [put_file(dirname, filename) for filename in filenames]
+
 class ChooseNextTestCase(unittest.TestCase):
     # pylint: disable=too-many-public-methods
     # pylint: disable=deprecated-method
@@ -80,11 +92,7 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def put_file(self, filename):
         """Put file into the temporary directory and return absolute path."""
-        path = os.path.join(self.tmpdir, filename)
-        mkdir_p(os.path.dirname(path))
-        with open(path, 'w') as stream:
-            stream.write(filename)
-        return path
+        return put_file(self.tmpdir, filename)
 
     def put_files(self, *filenames):
         """Put files into the temporary directory and return absolute paths."""
@@ -439,7 +447,26 @@ class ChooseNextTestCase(unittest.TestCase):
         with self.assertRaisesRegex(choose_next.Error, 'error listing'):
             choose_next_main(os.path.join(self.tmpdir, '\xe4'))
 
-    # TODO: logfile clash '/' <-> '_'
+    def test_logfile_name_clash(self):
+        """Check that mapping of directory to logfile name has no clash."""
+        tmpdir1 = os.path.join(self.tmpdir, 'foo_bar')
+        tmpdir2 = os.path.join(self.tmpdir, 'foo', 'bar')
+        file_a1, _unused = put_files(tmpdir1, 'a', 'b')
+        file_a2, _unused = put_files(tmpdir2, 'a', 'b')
+        self.assertEqual(file_a1 + '\n', choose_next_main(tmpdir1))
+        self.assertEqual(file_a2 + '\n', choose_next_main(tmpdir2))
+
+    def test_logfile_name_migration(self):
+        """Check that migration of logfile name works."""
+        file_a, file_b, file_c = self.put_files('a', 'b', 'c')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        old_logfile = os.path.join(self.logdir, self.tmpdir.replace(os.path.sep, '_'))
+        new_logfile = os.path.join(self.logdir, choose_next.quote_plus(self.tmpdir))
+        os.rename(new_logfile, old_logfile)
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+
     # TODO: newlines in files
     # TODO: prune stale entries from logfile
 

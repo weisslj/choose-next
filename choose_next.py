@@ -25,6 +25,10 @@ if sys.version_info < (3, 0):
     from itertools import ifilter as filter  # pylint: disable=redefined-builtin
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
+try:
+    from urllib.parse import quote_plus  # pylint: disable=no-name-in-module,import-error
+except ImportError:  # Python 2 compatibility
+    from urllib import quote_plus  # pylint: disable=no-name-in-module
 
 MAKEDIRS = os.makedirs
 if sys.version_info < (3, 4):
@@ -285,7 +289,11 @@ def main_throws(args=None):
             MAKEDIRS(logdir, exist_ok=True)
         except OSError as exc:
             raise Error('error creating logdir {}: {}'.format(logdir, exc.strerror))
-        args.logfile = os.path.join(logdir, args.dir.replace(os.path.sep, '_'))
+        args.logfile = os.path.join(logdir, quote_plus(args.dir))
+        # Migrate from old logfile name:
+        old_logfile = os.path.join(logdir, args.dir.replace(os.path.sep, '_'))
+        if os.path.exists(old_logfile) and not os.path.exists(args.logfile):
+            os.rename(old_logfile, args.logfile)
 
     if args.clear:
         try:
