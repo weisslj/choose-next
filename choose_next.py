@@ -143,8 +143,8 @@ def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
-def choose_next(args, next_file=None):
-    """Main functionality."""
+def choose_next_file(args, next_file=None):
+    """Part of main functionality."""
     logfile_content_list = read_logfile(args.logfile, args.dir)
     logfile_content = set(logfile_content_list)
     played_list = logfile_content_list if not args.no_read else []
@@ -228,24 +228,74 @@ def choose_next(args, next_file=None):
 
     return retval
 
+def choose_next(args):
+    """Main functionality."""
+    i = 0
+    while True:
+        next_file = args.files[i] if i < len(args.files) else None
+        retval = choose_next_file(args, next_file)
+        if retval != 0:
+            raise Error('command failed')
+        i += 1
+        if args.number >= 0 and i >= args.number:
+            break
+
+def modify_logfile(logfile, args):
+    """Modify logfile, e.g. clear first or last entry."""
+    entries = read_logfile(args.logfile, args.dir)
+    if entries:
+        if args.clear_first:
+            del entries[0]
+        if args.clear_last:
+            del entries[-1]
+        write_logfile(logfile, entries)
+
+def dump_logfile(logfile, dirpath):
+    """Dump logfile to stdout."""
+    for entry in read_logfile(logfile, dirpath):
+        if sys.version_info < (3, 0):
+            entry = entry.decode(errors='replace')
+        print(entry)
+
+def clear_logfile(logfile):
+    """Remove logfile if it exists."""
+    try:
+        os.unlink(logfile)
+    except OSError as exc:
+        if exc.errno != errno.ENOENT:
+            raise Error('error removing logfile {}: {}'.format(logfile, exc.strerror))
+
+def logfile_path(dirpath):
+    """Generate default logfile path, migrating old formats and creating needed directories."""
+    logdir_default = '~' + os.path.sep + '.choose_next'
+    logdir = os.getenv('CHOOSE_NEXT_LOGDIR', logdir_default)
+    logdir = os.path.expanduser(logdir)
+    try:
+        MAKEDIRS(logdir, exist_ok=True)
+    except OSError as exc:
+        raise Error('error creating logdir {}: {}'.format(logdir, exc.strerror))
+    logfile = os.path.join(logdir, quote_plus(dirpath))
+    # Migrate from old logfile name:
+    old_logfile = os.path.join(logdir, dirpath.replace(os.path.sep, '_'))
+    if os.path.exists(old_logfile) and not os.path.exists(logfile):
+        os.rename(old_logfile, logfile)
+    return logfile
+
 def main_throws(args=None):
     """Main function, throws exception on error."""
     # For locale-specific sorting of filenames:
     locale.setlocale(locale.LC_ALL, '')
-
+    #
     usage = '%(prog)s [OPTION]... DIR [FILE]...'
     desc = 'Chooses a file from directory DIR (recursively) and print it\'s '\
         'name to stdout. Afterwards it is appended to a log file. Only '\
         'files which are not in log file are considered for selection.\n'\
         'Tries to choose the file which is next in lexical order in DIR.'
-
-    logdir_default = '~' + os.path.sep + '.choose_next'
-    logdir = os.getenv('CHOOSE_NEXT_LOGDIR', logdir_default)
-
+    #
     parser = argparse.ArgumentParser(usage=usage, description=desc)
     parser.set_defaults(verbosity=1)
     parser.set_defaults(recursive=True)
-
+    #
     parser.add_argument('dir', metavar='DIR', help='directory to choose from')
     parser.add_argument('files', metavar='FILES', nargs='*',
                         help='prefer these files before all others')
@@ -253,17 +303,14 @@ def main_throws(args=None):
     parser.add_argument('-c', '--command', metavar='CMD',
                         help='execute CMD on every selected file; %%s in CMD is substituted '\
                              'with the filename, otherwise it is appended to CMD')
-
     parser.add_argument('--clear', action='store_true',
                         default=False, help='remove log file and exit')
     parser.add_argument('--clear-first', action='store_true',
                         default=False, help='remove first log file entry and exit')
     parser.add_argument('--clear-last', action='store_true',
                         default=False, help='remove last log file entry and exit')
-
     parser.add_argument('--dump', action='store_true',
                         default=False, help='dump log file to stdout and exit')
-
     parser.add_argument('-i', '--no-read', action='store_true',
                         default=False, help='don\'t use log file to filter selection')
     parser.add_argument('-L', '--logfile', metavar='FILE',
@@ -292,60 +339,21 @@ def main_throws(args=None):
                         help='exclude files matching PATTERN')
     parser.add_argument('--include', metavar='PATTERN',
                         help='don\'t exclude files matching PATTERN')
-
     args = parser.parse_args(args)
     args.dir = os.path.realpath(args.dir)
     args.files[:] = [logfile_entry_to_path(os.path.realpath(path), args.dir) for path in args.files]
-
-    if args.logfile is None:
-        logdir = os.path.expanduser(logdir)
-        try:
-            MAKEDIRS(logdir, exist_ok=True)
-        except OSError as exc:
-            raise Error('error creating logdir {}: {}'.format(logdir, exc.strerror))
-        args.logfile = os.path.join(logdir, quote_plus(args.dir))
-        # Migrate from old logfile name:
-        old_logfile = os.path.join(logdir, args.dir.replace(os.path.sep, '_'))
-        if os.path.exists(old_logfile) and not os.path.exists(args.logfile):
-            os.rename(old_logfile, args.logfile)
-
-    if args.clear:
-        try:
-            os.unlink(args.logfile)
-        except OSError as exc:
-            if exc.errno != errno.ENOENT:
-                raise Error('error removing logfile {}: {}'.format(args.logfile, exc.strerror))
-        return 0
-
-    if args.clear_first or args.clear_last or args.dump:
-        lines = read_logfile(args.logfile, args.dir)
-        if lines and args.clear_first:
-            del lines[0]
-        if lines and args.clear_last:
-            del lines[-1]
-        if args.clear_first or args.clear_last:
-            write_logfile(args.logfile, lines)
-        if args.dump:
-            for line in lines:
-                if sys.version_info < (3, 0):
-                    line = line.decode(errors='replace')
-                print(line)
-        return 0
-
-    if args.number >= 0 and args.number <= len(args.files):
+    if 0 <= args.number <= len(args.files):
         args.number = len(args.files)
-
-    i = 0
-    while True:
-        next_file = args.files[i] if i < len(args.files) else None
-        retval = choose_next(args, next_file)
-        if retval != 0:
-            raise Error('command failed')
-        i += 1
-        if args.number >= 0 and i >= args.number:
-            break
-
-    return 0
+    if args.logfile is None:
+        args.logfile = logfile_path(args.dir)
+    if args.clear:
+        clear_logfile(args.logfile)
+    elif args.clear_first or args.clear_last:
+        modify_logfile(args.logfile, args)
+    elif args.dump:
+        dump_logfile(args.logfile, args.dir)
+    else:
+        choose_next(args)
 
 def main(args=None):
     """Main function, exits program on error."""

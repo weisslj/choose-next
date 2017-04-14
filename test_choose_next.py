@@ -278,6 +278,7 @@ class ChooseNextTestCase(unittest.TestCase):
     def test_clear_last(self):
         """Check that the '--clear-last' option works."""
         file_a, file_b, _unused = self.put_files('a', 'b', 'c')
+        choose_next_main(self.tmpdir, '--clear-last')
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
         choose_next_main(self.tmpdir, '--clear-last')
@@ -287,6 +288,7 @@ class ChooseNextTestCase(unittest.TestCase):
     def test_clear_first(self):
         """Check that the '--clear-first' option works."""
         file_a, file_b, file_c = self.put_files('a', 'b', 'c')
+        choose_next_main(self.tmpdir, '--clear-first')
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
         choose_next_main(self.tmpdir, '--clear-first')
