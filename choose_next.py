@@ -303,14 +303,17 @@ def main_throws(args=None):
     parser.add_argument('-c', '--command', metavar='CMD',
                         help='execute CMD on every selected file; %%s in CMD is substituted '\
                              'with the filename, otherwise it is appended to CMD')
-    parser.add_argument('--clear', action='store_true',
-                        default=False, help='remove log file and exit')
-    parser.add_argument('--clear-first', action='store_true',
-                        default=False, help='remove first log file entry and exit')
-    parser.add_argument('--clear-last', action='store_true',
-                        default=False, help='remove last log file entry and exit')
-    parser.add_argument('--dump', action='store_true',
-                        default=False, help='dump log file to stdout and exit')
+    #
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--clear', action='store_true',
+                       default=False, help='remove log file and exit')
+    group.add_argument('--clear-first', action='store_true',
+                       default=False, help='remove first log file entry and exit')
+    group.add_argument('--clear-last', action='store_true',
+                       default=False, help='remove last log file entry and exit')
+    group.add_argument('--dump', action='store_true',
+                       default=False, help='dump log file to stdout and exit')
+    #
     parser.add_argument('-i', '--no-read', action='store_true',
                         default=False, help='don\'t use log file to filter selection')
     parser.add_argument('-L', '--logfile', metavar='FILE',
