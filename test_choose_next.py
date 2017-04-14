@@ -207,7 +207,7 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def test_command(self):
         """Check that '-c' and '--command' options work."""
-        file_a1, file_a2 = self.put_files('a1', 'a2')
+        file_a1, file_a2 = self.put_files('a1 x', "a2'x")
         pysed = (
             'python -c "'
             'from sys import argv as a;'
@@ -217,8 +217,8 @@ class ChooseNextTestCase(unittest.TestCase):
         )
         self.assertEqual(file_a1 + '\n', choose_next_main(self.tmpdir, '-c', pysed))
         self.assertEqual(file_a2 + '\n', choose_next_main(self.tmpdir, '--command', pysed))
-        self.assertEqual('b1', open(file_a1).read())
-        self.assertEqual('b2', open(file_a2).read())
+        self.assertEqual('b1 x', open(file_a1).read())
+        self.assertEqual("b2'x", open(file_a2).read())
         with self.assertRaisesRegex(choose_next.Error, 'command failed'):
             choose_next_main(self.tmpdir, '-c' 'python -c "exit(1)"')
 
