@@ -217,8 +217,10 @@ class ChooseNextTestCase(unittest.TestCase):
         )
         self.assertEqual(file_a1 + '\n', choose_next_main(self.tmpdir, '-c', pysed))
         self.assertEqual(file_a2 + '\n', choose_next_main(self.tmpdir, '--command', pysed))
-        self.assertEqual('b1 x', open(file_a1).read())
-        self.assertEqual("b2'x", open(file_a2).read())
+        with open(file_a1) as stream:
+            self.assertEqual('b1 x', stream.read())
+        with open(file_a2) as stream:
+            self.assertEqual("b2'x", stream.read())
         with self.assertRaisesRegex(choose_next.Error, 'command failed'):
             choose_next_main(self.tmpdir, '-c' 'python -c "exit(1)"')
 
