@@ -19,12 +19,16 @@ import subprocess
 import fnmatch
 import errno
 import argparse
+import shlex
+import pipes
 from itertools import islice, cycle
 
 if sys.version_info < (3, 0):
     from itertools import ifilter as filter  # pylint: disable=no-name-in-module,redefined-builtin
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
+if sys.version_info < (3, 3):
+    shlex.quote = pipes.quote
 try:
     from urllib.parse import quote_plus  # pylint: disable=no-name-in-module,import-error
 except ImportError:  # Python 2 compatibility
@@ -123,10 +127,6 @@ def logfile_prepend(path, entry, old_entries):
     entries = [entry] + old_entries
     write_logfile(path, entries)
 
-def shellquote(string):
-    """Return a quoted version of string suitable for a sh-like shell."""
-    return "'" + string.replace("'", "'\\''") + "'"
-
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
     """Return a sort key that works for filenames like '23 - foo'."""
@@ -201,7 +201,7 @@ def choose_next_file(args, next_file=None):
 
     retval = 0
     if args.command:
-        next_file_quoted = shellquote(next_file_abs)
+        next_file_quoted = shlex.quote(next_file_abs)
         try:
             command = args.command % next_file_quoted
         except TypeError:
