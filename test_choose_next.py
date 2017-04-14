@@ -366,7 +366,8 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual('a\nc\n', choose_next_main(self.tmpdir, '--dump'))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_nonexist + '\n', choose_next_main(self.tmpdir, file_nonexist))
-        # TODO: Abort if not all paths are relative to the given directory
+        with self.assertRaisesRegex(choose_next.Error, 'leads outside given directory'):
+            choose_next_main(self.tmpdir, os.path.join(self.logdir, 'outside'))
 
     def test_repeat(self):
         """Check that repeating works even if no remaining files follow."""
@@ -405,6 +406,9 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         with self.assertRaisesRegex(choose_next.Error, 'error reading logfile'):
             choose_next_main(self.tmpdir, '--logfile', self.tmpdir)
+        choose_next.logfile_append(logfile, os.path.join(self.logdir, 'outside'))
+        with self.assertRaisesRegex(choose_next.Error, 'leads outside given directory'):
+            choose_next_main(self.tmpdir, '--logfile', logfile)
         shutil.rmtree(logdir)
 
     def test_nonexist_logdir(self):

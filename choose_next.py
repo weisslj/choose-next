@@ -82,11 +82,26 @@ def read_dir(path, recursive=False, exclude=None, include=None, include_director
             break
     return paths
 
-def read_logfile(path):
+def make_relpath(path, start=os.curdir):
+    """Return relative path to start directory, raise error if it leads outside."""
+    try:
+        relpath = os.path.relpath(path, start)
+        if relpath.startswith(os.pardir + os.sep):
+            raise Error('error, path {} leads outside given directory'.format(path))
+        return relpath
+    except ValueError as exc:  # only on Windows, e.g. if drive letters differ
+        raise Error('{}: {}'.format(path, exc))
+
+def logfile_entry_to_path(entry, dirpath):
+    """Convert logfile entry to relative path."""
+    path = entry if os.path.isabs(entry) else os.path.join(dirpath, entry)
+    return make_relpath(path, dirpath)
+
+def read_logfile(path, dirpath):
     """Return list of logfile entries."""
     try:
         with open(path, 'r') as stream:
-            return [line.rstrip('\r\n') for line in stream]
+            return [logfile_entry_to_path(line.rstrip('\r\n'), dirpath) for line in stream]
     except IOError as exc:
         if exc.errno == errno.ENOENT:
             return []
@@ -130,8 +145,7 @@ def numkey_path(path):
 
 def choose_next(args, next_file=None):
     """Main functionality."""
-    logfile_content_list = [os.path.relpath(l, args.dir) if os.path.isabs(l) else l
-                            for l in read_logfile(args.logfile)]
+    logfile_content_list = read_logfile(args.logfile, args.dir)
     logfile_content = set(logfile_content_list)
     played_list = logfile_content_list if not args.no_read else []
 
@@ -281,7 +295,7 @@ def main_throws(args=None):
 
     args = parser.parse_args(args)
     args.dir = os.path.realpath(args.dir)
-    args.files[:] = [os.path.relpath(path, args.dir) for path in args.files]
+    args.files[:] = [logfile_entry_to_path(os.path.realpath(path), args.dir) for path in args.files]
 
     if args.logfile is None:
         logdir = os.path.expanduser(logdir)
@@ -304,7 +318,7 @@ def main_throws(args=None):
         return 0
 
     if args.clear_first or args.clear_last or args.dump:
-        lines = read_logfile(args.logfile)
+        lines = read_logfile(args.logfile, args.dir)
         if lines and args.clear_first:
             del lines[0]
         if lines and args.clear_last:
