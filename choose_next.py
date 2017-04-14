@@ -22,7 +22,7 @@ import argparse
 from itertools import islice, cycle
 
 if sys.version_info < (3, 0):
-    from itertools import ifilter as filter  # pylint: disable=redefined-builtin
+    from itertools import ifilter as filter  # pylint: disable=no-name-in-module,redefined-builtin
 if sys.version_info < (3, 2):
     os.fsencode = lambda filename: filename
 try:
