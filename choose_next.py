@@ -153,8 +153,7 @@ def choose_next_file(args, next_file=None):
     available = set(read_dir(args.dir, recursive=args.recursive, exclude=args.exclude,
                              include=args.include,
                              include_directories=args.include_directories))
-    available_list = list(available)
-    available_list.sort(key=numkey_path)
+    available_list = sorted(available, key=numkey_path)
     remaining = available - played
 
     rewrite_logfile = False
@@ -162,8 +161,7 @@ def choose_next_file(args, next_file=None):
         rewrite_logfile = True
         remaining = available
 
-    remaining_list = list(remaining)
-    remaining_list.sort(key=numkey_path)
+    remaining_list = sorted(remaining, key=numkey_path)
 
     debug(args.verbosity > 1, 'directory to choose from: {}', args.dir)
     debug(args.verbosity > 1, 'logfile: {}', args.logfile)
