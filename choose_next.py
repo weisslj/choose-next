@@ -147,22 +147,22 @@ def choose_next_file(args, next_file=None):
     """Part of main functionality."""
     logfile_content_list = read_logfile(args.logfile, args.dir)
     logfile_content = set(logfile_content_list)
+    #
     played_list = logfile_content_list if not args.no_read else []
-
     played = set(played_list)
+    #
     available = set(read_dir(args.dir, recursive=args.recursive, exclude=args.exclude,
                              include=args.include,
                              include_directories=args.include_directories))
     available_list = sorted(available, key=numkey_path)
+    #
     remaining = available - played
-
     rewrite_logfile = False
     if not remaining:
         rewrite_logfile = True
         remaining = available
-
     remaining_list = sorted(remaining, key=numkey_path)
-
+    #
     debug(args.verbosity > 1, 'directory to choose from: {}', args.dir)
     debug(args.verbosity > 1, 'logfile: {}', args.logfile)
     debug(args.verbosity > 1, 'files available: {}', len(available))
@@ -174,10 +174,10 @@ def choose_next_file(args, next_file=None):
     debug(args.verbosity > 1, 'files remaining for selection: {}', len(remaining))
     for path in remaining_list:
         debug(args.verbosity > 2, '{}', path)
-
+    #
     if not remaining:
         raise Error('error, no files available in {}'.format(args.dir))
-
+    #
     if next_file:
         pass
     elif args.last and played_list:
@@ -193,10 +193,10 @@ def choose_next_file(args, next_file=None):
                 index = available_list.index(last_file) + 1
         next_file = next(filter(lambda path: path in remaining,
                                 islice(cycle(available_list), index, None)))
-
+    #
     debug(args.verbosity > 1, 'selected file: {}', next_file)
     next_file_abs = os.path.join(args.dir, next_file)
-
+    #
     retval = 0
     if args.command:
         next_file_quoted = shlex.quote(next_file_abs)
@@ -206,13 +206,13 @@ def choose_next_file(args, next_file=None):
             command = args.command + ' ' + next_file_quoted
         debug(args.verbosity > 1, 'executing command: {}', command)
         retval = subprocess.call(command, shell=True)
-
+    #
     if args.verbosity > 0:
         msg = next_file_abs
         if sys.version_info < (3, 0):
             msg = msg.decode(errors='replace')
         print(msg)
-
+    #
     if retval == 0 and not args.no_write:
         if rewrite_logfile:
             debug(args.verbosity > 1, 'truncating logfile (was full)')
@@ -223,7 +223,7 @@ def choose_next_file(args, next_file=None):
             else:
                 mode = 'ab' if not rewrite_logfile else 'wb'
                 logfile_append(args.logfile, next_file, mode=mode)
-
+    #
     return retval
 
 def choose_next(args):
