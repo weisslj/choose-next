@@ -336,7 +336,7 @@ class ChooseNextTestCase(unittest.TestCase):
         file_a, file_b = self.put_files('a', 'b')
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         choose_next_main(self.tmpdir, '--clear')
-        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-n', '0'))
+        self.assertEqual('', choose_next_main(self.tmpdir, '-n', '0'))
         choose_next_main(self.tmpdir, '--clear')
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-n', '1'))
         choose_next_main(self.tmpdir, '--clear')

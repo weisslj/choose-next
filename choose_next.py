@@ -21,7 +21,7 @@ import errno
 import argparse
 import shlex
 import pipes
-from itertools import islice, cycle
+from itertools import islice, cycle, count
 
 if sys.version_info < (3, 0):
     from itertools import ifilter as filter  # pylint: disable=no-name-in-module,redefined-builtin
@@ -231,8 +231,7 @@ def choose_next_file(args, next_file=None):
 
 def choose_next(args):
     """Main functionality."""
-    i = 0
-    while True:
+    for i in range(args.number) if args.number >= 0 else count():
         next_file = args.files[i] if i < len(args.files) else None
         logfile_content, logfile_content_list, next_file, rewrite_logfile = \
                 choose_next_file(args, next_file)
@@ -240,9 +239,6 @@ def choose_next(args):
                                 logfile_content_list, rewrite_logfile, args)
         if retval != 0:
             raise Error('command failed')
-        i += 1
-        if args.number >= 0 and i >= args.number:
-            break
 
 def modify_logfile(logfile, args):
     """Modify logfile, e.g. clear first or last entry."""
