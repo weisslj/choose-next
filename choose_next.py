@@ -143,6 +143,40 @@ def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
+def play_next_file(next_file, logfile_content, logfile_content_list, rewrite_logfile, args):
+    """Part of main functionality."""
+    debug(args.verbosity > 1, 'selected file: {}', next_file)
+    next_file_abs = os.path.join(args.dir, next_file)
+    #
+    retval = 0
+    if args.command:
+        next_file_quoted = shlex.quote(next_file_abs)
+        try:
+            command = args.command % next_file_quoted
+        except TypeError:
+            command = args.command + ' ' + next_file_quoted
+        debug(args.verbosity > 1, 'executing command: {}', command)
+        retval = subprocess.call(command, shell=True)
+    #
+    if args.verbosity > 0:
+        msg = next_file_abs
+        if sys.version_info < (3, 0):
+            msg = msg.decode(errors='replace')
+        print(msg)
+    #
+    if retval == 0 and not args.no_write:
+        if rewrite_logfile:
+            debug(args.verbosity > 1, 'truncating logfile (was full)')
+        if next_file not in logfile_content or rewrite_logfile:
+            if args.prepend:
+                lines = logfile_content_list if not rewrite_logfile else []
+                logfile_prepend(args.logfile, next_file, lines)
+            else:
+                mode = 'ab' if not rewrite_logfile else 'wb'
+                logfile_append(args.logfile, next_file, mode=mode)
+    #
+    return retval
+
 def choose_next_file(args, next_file=None):
     """Part of main functionality."""
     logfile_content_list = read_logfile(args.logfile, args.dir)
@@ -193,45 +227,17 @@ def choose_next_file(args, next_file=None):
                 index = available_list.index(last_file) + 1
         next_file = next(filter(lambda path: path in remaining,
                                 islice(cycle(available_list), index, None)))
-    #
-    debug(args.verbosity > 1, 'selected file: {}', next_file)
-    next_file_abs = os.path.join(args.dir, next_file)
-    #
-    retval = 0
-    if args.command:
-        next_file_quoted = shlex.quote(next_file_abs)
-        try:
-            command = args.command % next_file_quoted
-        except TypeError:
-            command = args.command + ' ' + next_file_quoted
-        debug(args.verbosity > 1, 'executing command: {}', command)
-        retval = subprocess.call(command, shell=True)
-    #
-    if args.verbosity > 0:
-        msg = next_file_abs
-        if sys.version_info < (3, 0):
-            msg = msg.decode(errors='replace')
-        print(msg)
-    #
-    if retval == 0 and not args.no_write:
-        if rewrite_logfile:
-            debug(args.verbosity > 1, 'truncating logfile (was full)')
-        if next_file not in logfile_content or rewrite_logfile:
-            if args.prepend:
-                lines = logfile_content_list if not rewrite_logfile else []
-                logfile_prepend(args.logfile, next_file, lines)
-            else:
-                mode = 'ab' if not rewrite_logfile else 'wb'
-                logfile_append(args.logfile, next_file, mode=mode)
-    #
-    return retval
+    return logfile_content, logfile_content_list, next_file, rewrite_logfile
 
 def choose_next(args):
     """Main functionality."""
     i = 0
     while True:
         next_file = args.files[i] if i < len(args.files) else None
-        retval = choose_next_file(args, next_file)
+        logfile_content, logfile_content_list, next_file, rewrite_logfile = \
+                choose_next_file(args, next_file)
+        retval = play_next_file(next_file, logfile_content,
+                                logfile_content_list, rewrite_logfile, args)
         if retval != 0:
             raise Error('command failed')
         i += 1
