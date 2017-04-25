@@ -18,6 +18,7 @@ import shutil
 from io import StringIO
 import subprocess
 import stat
+import multiprocessing
 
 import choose_next
 
@@ -333,8 +334,29 @@ class ChooseNextTestCase(unittest.TestCase):
     def test_number(self):
         """Check that '-n' and '--number' options work."""
         file_a, file_b = self.put_files('a', 'b')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        choose_next_main(self.tmpdir, '--clear')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-n', '0'))
+        choose_next_main(self.tmpdir, '--clear')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-n', '1'))
+        choose_next_main(self.tmpdir, '--clear')
         self.assertEqual(file_a + '\n' + file_b + '\n', choose_next_main(self.tmpdir, '-n', '2'))
-        # TODO: More tests
+        choose_next_main(self.tmpdir, '--clear')
+        self.assertEqual(file_a + '\n' + file_b + '\n' + file_a + '\n',
+                         choose_next_main(self.tmpdir, '-n', '3'))
+        choose_next_main(self.tmpdir, '--clear')
+        self.assertEqual(file_a + '\n' + file_b + '\n',
+                         choose_next_main(self.tmpdir, file_a, file_b))
+        choose_next_main(self.tmpdir, '--clear')
+        self.assertEqual(file_a + '\n' + file_b + '\n',
+                         choose_next_main('-n', '1', self.tmpdir, file_a, file_b))
+        choose_next_main(self.tmpdir, '--clear')
+        process = multiprocessing.Process(target=choose_next_main, args=(self.tmpdir, '-n', '-1'))
+        process.start()
+        process.join(timeout=3)
+        self.assertTrue(process.is_alive())
+        process.terminate()
+        process.join()
 
     def test_include_directories(self):
         """Check that '-d' and '--include-directories' options work."""
