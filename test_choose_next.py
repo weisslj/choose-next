@@ -348,8 +348,7 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_a + '\n' + file_b + '\n',
                          choose_next_main(self.tmpdir, file_a, file_b))
         choose_next_main(self.tmpdir, '--clear')
-        self.assertEqual(file_a + '\n' + file_b + '\n',
-                         choose_next_main('-n', '1', self.tmpdir, file_a, file_b))
+        self.assertEqual(file_a + '\n', choose_next_main('-n', '1', self.tmpdir, file_a, file_b))
         choose_next_main(self.tmpdir, '--clear')
         process = multiprocessing.Process(target=choose_next_main, args=(self.tmpdir, '-n', '-1'))
         process.start()

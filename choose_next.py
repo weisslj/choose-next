@@ -328,7 +328,7 @@ def main_throws(args=None):
                         help='do not scan DIR recursively')
     parser.add_argument('-d', '--include-directories', action='store_true',
                         default=False, help='also select directories')
-    parser.add_argument('-n', '--number', type=int, default=1, metavar='NUM',
+    parser.add_argument('-n', '--number', type=int, metavar='NUM',
                         help='number of files to select (-1: infinite)')
     parser.add_argument('-p', '--prepend', action='store_true',
                         default=False, help='prepend selected filename instead of appending')
@@ -349,8 +349,8 @@ def main_throws(args=None):
     args = parser.parse_args(args)
     args.dir = os.path.realpath(args.dir)
     args.files[:] = [logfile_entry_to_path(os.path.realpath(path), args.dir) for path in args.files]
-    if 0 <= args.number <= len(args.files):
-        args.number = len(args.files)
+    if args.number is None:
+        args.number = len(args.files) if args.files else 1
     if args.logfile is None:
         args.logfile = logfile_path(args.dir)
     if args.clear:
