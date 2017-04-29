@@ -526,7 +526,7 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
         os.remove(file_a)
         self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
-        # We could prune a here already:
+        # We could prune 'a' here already:
         self.assertEqual('a\nb\nc\n', choose_next_main(self.tmpdir, '--dump'))
         self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
