@@ -10,4 +10,5 @@ install:
 script:
   - coverage run test_choose_next.py
   - coverage report --fail-under=100
+  - pylint *.py
   - python setup.py -q install
