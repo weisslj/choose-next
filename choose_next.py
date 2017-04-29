@@ -241,6 +241,7 @@ def dump_logfile(logfile, dirpath, end='\0'):
     for entry in read_logfile(logfile, dirpath):
         if sys.version_info < (3, 0):
             entry = entry.decode(errors='replace')
+            end = end.decode()
         print(entry, end=end)
 
 def clear_logfile(logfile):
