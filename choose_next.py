@@ -105,7 +105,9 @@ def read_logfile(path, dirpath):
     """Return list of logfile entries."""
     try:
         with open(path, 'r') as stream:
-            return [logfile_entry_to_path(line.rstrip('\r\n'), dirpath) for line in stream]
+            content = stream.read()
+            entries = content.split('\0')[:-1] if '\0' in content else content.splitlines()
+            return [logfile_entry_to_path(entry, dirpath) for entry in entries]
     except IOError as exc:
         if exc.errno == errno.ENOENT:
             return []
@@ -115,7 +117,7 @@ def read_logfile(path, dirpath):
 def write_logfile(path, entries):
     """Write logfile entries to path."""
     with open(path, 'wb') as stream:
-        stream.write(b''.join([os.fsencode(e) + os.linesep.encode() for e in entries]))
+        stream.write(b''.join([os.fsencode(e) + b'\0' for e in entries]))
 
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
@@ -234,12 +236,12 @@ def modify_logfile(logfile, args):
             del entries[-1]
         write_logfile(logfile, entries)
 
-def dump_logfile(logfile, dirpath):
+def dump_logfile(logfile, dirpath, end='\0'):
     """Dump logfile to stdout."""
     for entry in read_logfile(logfile, dirpath):
         if sys.version_info < (3, 0):
             entry = entry.decode(errors='replace')
-        print(entry)
+        print(entry, end=end)
 
 def clear_logfile(logfile):
     """Remove logfile if it exists."""
@@ -296,7 +298,10 @@ def main_throws(args=None):
     group.add_argument('--clear-last', action='store_true',
                        default=False, help='remove last log file entry and exit')
     group.add_argument('--dump', action='store_true',
-                       default=False, help='dump log file to stdout and exit')
+                       default=False, help='dump log file to stdout and exit, newline separated')
+    group.add_argument('--dump0', action='store_true',
+                       default=False, help='dump log file to stdout and exit, '\
+                                           'null character separated')
     #
     parser.add_argument('-i', '--no-read', action='store_true',
                         default=False, help='don\'t use log file to filter selection')
@@ -338,7 +343,9 @@ def main_throws(args=None):
     elif args.clear_first or args.clear_last:
         modify_logfile(args.logfile, args)
     elif args.dump:
-        dump_logfile(args.logfile, args.dir)
+        dump_logfile(args.logfile, args.dir, end=os.linesep)
+    elif args.dump0:
+        dump_logfile(args.logfile, args.dir, end='\0')
     else:
         choose_next(args)
 

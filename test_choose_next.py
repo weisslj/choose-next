@@ -193,6 +193,15 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
         self.assertEqual('a\nb\n', choose_next_main(self.tmpdir, '--dump'))
 
+    def test_dump0(self):
+        """Check that the '--dump0' option works."""
+        file_a, file_b = self.put_files('a', 'b')
+        self.assertEqual('', choose_next_main(self.tmpdir, '--dump0'))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual('a\0', choose_next_main(self.tmpdir, '--dump0'))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual('a\0b\0', choose_next_main(self.tmpdir, '--dump0'))
+
     def test_quiet(self):
         """Check that '-q' and '--quiet' options work."""
         self.put_files('a', 'b')
@@ -532,7 +541,30 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
         self.assertEqual('b\n', choose_next_main(self.tmpdir, '--dump'))
 
-    # TODO: newlines in files
+    @unittest.skipIf(os.name == 'nt', 'newlines in files not supported on Windows')
+    def test_newlines(self):
+        """Check that files containing newlines are supported."""
+        file_a, file_b = self.put_files('a\n', 'b\nc')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual('a\n\0', choose_next_main(self.tmpdir, '--dump0'))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual('a\n\0b\nc\0', choose_next_main(self.tmpdir, '--dump0'))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual('a\n\0', choose_next_main(self.tmpdir, '--dump0'))
+
+    def test_logfile_migration(self):
+        """Check that migration of logfile works."""
+        logdir = tempfile.mkdtemp()
+        logfile = os.path.join(logdir, 'logfile')
+        file_a, file_b, file_c = self.put_files('a', 'b', 'c')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-L', logfile))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir, '-L', logfile))
+        entries = choose_next.read_logfile(logfile, self.tmpdir)
+        with open(logfile, 'wb') as stream:
+            stream.write(b''.join([os.fsencode(e) + os.linesep.encode() for e in entries]))
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir, '-L', logfile))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-L', logfile))
+        shutil.rmtree(logdir)
 
 if __name__ == '__main__':
     unittest.main(buffer=True, catchbreak=True)
