@@ -496,6 +496,28 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
 
+    def test_wrap(self):
+        """Check that wrapping works multiple times (got broken during development)."""
+        file_a, file_b, file_c = self.put_files('a', 'b', 'c')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
+
+    def test_logfile_prune(self):
+        """Check that logfile does not grow too much."""
+        file_a, file_b, file_c = self.put_files('a', 'b', 'c')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual('a\n', choose_next_main(self.tmpdir, '--dump'))
+
     # TODO: newlines in files
     # TODO: prune stale entries from logfile
 
