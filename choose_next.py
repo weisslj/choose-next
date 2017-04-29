@@ -117,7 +117,7 @@ def read_logfile(path, dirpath):
 def write_logfile(path, entries):
     """Write logfile entries to path."""
     with open(path, 'wb') as stream:
-        stream.write(b''.join([os.fsencode(e) + b'\0' for e in entries]))
+        stream.write(b''.join(os.fsencode(entry) + b'\0' for entry in entries))
 
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
