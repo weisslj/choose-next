@@ -21,6 +21,7 @@ import errno
 import argparse
 import shlex
 import pipes
+import logging
 from itertools import islice, cycle, count
 
 if sys.version_info < (3, 0):
@@ -49,15 +50,6 @@ if sys.version_info < (3, 4):
 class Error(Exception):
     """Abort program, used in test suite."""
     pass
-
-def debug(do_show, msg, *args, **kwargs):
-    """Output debug message to stderr."""
-    if not do_show:
-        return
-    msg = msg.format(*args, **kwargs)
-    if sys.version_info < (3, 0):
-        msg = msg.decode(errors='replace')
-    print(msg, file=sys.stderr)
 
 def read_dir_error(exc):
     """Raise Error exception on read_dir error."""
@@ -137,7 +129,7 @@ def numkey_path(path):
 
 def play_next_file(next_file, logfile_content_list, args):
     """Part of main functionality."""
-    debug(args.verbosity > 1, 'selected file: {}', next_file)
+    logging.info('selected file: %s', next_file)
     next_file_abs = os.path.join(args.dir, next_file)
     #
     retval = 0
@@ -147,7 +139,7 @@ def play_next_file(next_file, logfile_content_list, args):
             command = args.command % next_file_quoted
         except TypeError:
             command = args.command + ' ' + next_file_quoted
-        debug(args.verbosity > 1, 'executing command: {}', command)
+        logging.info('executing command: %s', command)
         retval = subprocess.call(command, shell=True)
     #
     if args.verbosity > 0:
@@ -180,22 +172,22 @@ def choose_next_file(args, next_file=None):
     #
     remaining = available - played
     if not remaining:
-        debug(args.verbosity > 1, 'truncating logfile (was full)')
+        logging.info('truncating logfile (was full)')
         logfile_content_list = []
         remaining = available
     remaining_list = sorted(remaining, key=numkey_path)
     #
-    debug(args.verbosity > 1, 'directory to choose from: {}', args.dir)
-    debug(args.verbosity > 1, 'logfile: {}', args.logfile)
-    debug(args.verbosity > 1, 'files available: {}', len(available))
+    logging.info('directory to choose from: %s', args.dir)
+    logging.info('logfile: %s', args.logfile)
+    logging.info('files available: %s', len(available))
     for path in available_list:
-        debug(args.verbosity > 2, '{}', path)
-    debug(args.verbosity > 1, 'files in logfile: {}', len(played))
+        logging.debug(path)
+    logging.info('files in logfile: %s', len(played))
     for path in played_list:
-        debug(args.verbosity > 2, '{}', path)
-    debug(args.verbosity > 1, 'files remaining for selection: {}', len(remaining))
+        logging.debug(path)
+    logging.info('files remaining for selection: %s', len(remaining))
     for path in remaining_list:
-        debug(args.verbosity > 2, '{}', path)
+        logging.debug(path)
     #
     if not remaining:
         raise Error('error, no files available in {}'.format(args.dir))
@@ -210,7 +202,7 @@ def choose_next_file(args, next_file=None):
         index = 0
         if played_list:
             last_file = played_list[-1]
-            debug(args.verbosity > 1, 'last selected file: {}', last_file)
+            logging.info('last selected file: %s', last_file)
             if last_file in available:
                 index = available_list.index(last_file) + 1
         next_file = next(filter(lambda path: path in remaining,
@@ -267,6 +259,17 @@ def logfile_path(dirpath):
     if os.path.exists(old_logfile) and not os.path.exists(logfile):
         os.rename(old_logfile, logfile)
     return logfile
+
+def loglevel(args):
+    """Return logging level."""
+    if args.verbosity > 2:
+        return logging.DEBUG
+    elif args.verbosity > 1:
+        return logging.INFO
+    elif args.verbosity == 0:
+        return logging.CRITICAL
+    else:
+        return logging.WARNING
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
@@ -333,6 +336,7 @@ def main_throws(args=None):
     parser.add_argument('--include', metavar='PATTERN',
                         help='don\'t exclude files matching PATTERN')
     args = parser.parse_args(args)
+    logging.basicConfig(level=loglevel(args), format='%(msg)s')
     args.dir = os.path.realpath(args.dir)
     args.files[:] = [logfile_entry_to_path(os.path.realpath(path), args.dir) for path in args.files]
     if args.number is None:
@@ -357,9 +361,7 @@ def main(args=None):
     except Error as exc:
         prog_name = os.path.basename(sys.argv[0])
         msg = '{}: {}'.format(prog_name, str(exc))
-        if sys.version_info < (3, 0):
-            msg = msg.decode(errors='replace')  # pylint: disable=redefined-variable-type
-        print(msg, file=sys.stderr)
+        logging.critical(msg)
         sys.exit(1)
 
 if __name__ == '__main__':
