@@ -431,7 +431,8 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         with self.assertRaisesRegex(choose_next.Error, 'error reading logfile'):
             choose_next_main(self.tmpdir, '--logfile', self.tmpdir)
-        choose_next.logfile_append(logfile, os.path.join(self.logdir, 'outside'))
+        entries = choose_next.read_logfile(logfile, self.tmpdir)
+        choose_next.write_logfile(logfile, entries + [os.path.join(self.logdir, 'outside')])
         with self.assertRaisesRegex(choose_next.Error, 'leads outside given directory'):
             choose_next_main(self.tmpdir, '--logfile', logfile)
         shutil.rmtree(logdir)

@@ -117,16 +117,6 @@ def write_logfile(path, entries):
     with open(path, 'wb') as stream:
         stream.write(b''.join([os.fsencode(e) + os.linesep.encode() for e in entries]))
 
-def logfile_append(path, entry, mode='ab'):
-    """Append logfile entry to path or rewrite."""
-    with open(path, mode) as stream:
-        stream.write(os.fsencode(entry) + os.linesep.encode())
-
-def logfile_prepend(path, entry, old_entries):
-    """Prepend logfile entry to path."""
-    entries = [entry] + old_entries
-    write_logfile(path, entries)
-
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
 def numkey(string):
     """Return a sort key that works for filenames like '23 - foo'."""
@@ -143,7 +133,7 @@ def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
 
-def play_next_file(next_file, logfile_content, logfile_content_list, rewrite_logfile, args):
+def play_next_file(next_file, logfile_content_list, args):
     """Part of main functionality."""
     debug(args.verbosity > 1, 'selected file: {}', next_file)
     next_file_abs = os.path.join(args.dir, next_file)
@@ -165,22 +155,18 @@ def play_next_file(next_file, logfile_content, logfile_content_list, rewrite_log
         print(msg)
     #
     if retval == 0 and not args.no_write:
-        if rewrite_logfile:
-            debug(args.verbosity > 1, 'truncating logfile (was full)')
-        if next_file not in logfile_content or rewrite_logfile:
+        if next_file not in logfile_content_list:
             if args.prepend:
-                lines = logfile_content_list if not rewrite_logfile else []
-                logfile_prepend(args.logfile, next_file, lines)
+                new_logfile_content_list = [next_file] + logfile_content_list
             else:
-                mode = 'ab' if not rewrite_logfile else 'wb'
-                logfile_append(args.logfile, next_file, mode=mode)
+                new_logfile_content_list = logfile_content_list + [next_file]
+            write_logfile(args.logfile, new_logfile_content_list)
     #
     return retval
 
 def choose_next_file(args, next_file=None):
     """Part of main functionality."""
     logfile_content_list = read_logfile(args.logfile, args.dir)
-    logfile_content = set(logfile_content_list)
     #
     played_list = logfile_content_list if not args.no_read else []
     played = set(played_list)
@@ -191,9 +177,9 @@ def choose_next_file(args, next_file=None):
     available_list = sorted(available, key=numkey_path)
     #
     remaining = available - played
-    rewrite_logfile = False
     if not remaining:
-        rewrite_logfile = True
+        debug(args.verbosity > 1, 'truncating logfile (was full)')
+        logfile_content_list = []
         remaining = available
     remaining_list = sorted(remaining, key=numkey_path)
     #
@@ -227,16 +213,14 @@ def choose_next_file(args, next_file=None):
                 index = available_list.index(last_file) + 1
         next_file = next(filter(lambda path: path in remaining,
                                 islice(cycle(available_list), index, None)))
-    return logfile_content, logfile_content_list, next_file, rewrite_logfile
+    return next_file, logfile_content_list
 
 def choose_next(args):
     """Main functionality."""
     for i in range(args.number) if args.number >= 0 else count():
         next_file = args.files[i] if i < len(args.files) else None
-        logfile_content, logfile_content_list, next_file, rewrite_logfile = \
-                choose_next_file(args, next_file)
-        retval = play_next_file(next_file, logfile_content,
-                                logfile_content_list, rewrite_logfile, args)
+        next_file, logfile_content_list = choose_next_file(args, next_file)
+        retval = play_next_file(next_file, logfile_content_list, args)
         if retval != 0:
             raise Error('command failed')
 
