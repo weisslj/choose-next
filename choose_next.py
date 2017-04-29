@@ -262,14 +262,8 @@ def logfile_path(dirpath):
 
 def loglevel(args):
     """Return logging level."""
-    if args.verbosity > 2:
-        return logging.DEBUG
-    elif args.verbosity > 1:
-        return logging.INFO
-    elif args.verbosity == 0:
-        return logging.CRITICAL
-    else:
-        return logging.WARNING
+    levels = [logging.CRITICAL, logging.WARNING, logging.INFO, logging.DEBUG]
+    return levels[min(len(levels) - 1, args.verbosity)]
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
