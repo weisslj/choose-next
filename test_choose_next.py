@@ -423,8 +423,6 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def test_numeric_sort(self):
         """Check that files are sorted numerically."""
-        # FIXME, should work, too:
-        # a, b, c = self.put_files('s 2/3 e', 's 2/20 e', 's 10/5 e')
         file_a, file_b, file_c = self.put_files('2/3 e', '2/20 e', '10/5 e')
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
