@@ -519,8 +519,20 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
         self.assertEqual('a\n', choose_next_main(self.tmpdir, '--dump'))
 
+    def test_logfile_prune_stale_files(self):
+        """Check that stale logfile entries are pruned."""
+        file_a, file_b, file_c, file_d = self.put_files('a', 'b', 'c', 'd')
+        self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        os.remove(file_a)
+        self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir))
+        # We could prune a here already:
+        self.assertEqual('a\nb\nc\n', choose_next_main(self.tmpdir, '--dump'))
+        self.assertEqual(file_d + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual(file_b + '\n', choose_next_main(self.tmpdir))
+        self.assertEqual('b\n', choose_next_main(self.tmpdir, '--dump'))
+
     # TODO: newlines in files
-    # TODO: prune stale entries from logfile
 
 if __name__ == '__main__':
     unittest.main(buffer=True, catchbreak=True)
