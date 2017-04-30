@@ -16,6 +16,7 @@ setup(
     name='choose-next',
     version='2.0.0',
     description='Chooses a file from a directory. Very handy to re-watch tv series!',
+    long_description=LONG_DESCRIPTION,
     author='Johannes Weißl',
     author_email='jargon@molb.org',
     url='https://github.com/weisslj/choose-next',
