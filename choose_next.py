@@ -283,7 +283,7 @@ def main_throws(args=None):
     parser.add_argument('dir', metavar='DIR', help='directory to choose from')
     parser.add_argument('files', metavar='FILES', nargs='*',
                         help='prefer these files before all others')
-    parser.add_argument('--version', action='version', version='%(prog)s 1.1')
+    parser.add_argument('--version', action='version', version='%(prog)s 2.0.0')
     parser.add_argument('-c', '--command', metavar='CMD',
                         help='execute CMD on every selected file; %%s in CMD is substituted '\
                              'with the filename, otherwise it is appended to CMD')

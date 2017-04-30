@@ -14,7 +14,7 @@ with codecs.open(os.path.join(HERE, 'README.rst'), encoding='utf-8') as stream:
 
 setup(
     name='choose-next',
-    version='1.1',
+    version='2.0.0',
     description='Chooses a file from a directory. Very handy to re-watch tv series!',
     author='Johannes Weißl',
     author_email='jargon@molb.org',
