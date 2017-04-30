@@ -8,10 +8,9 @@ Motivation
 
 Sometimes all you want to do is to lie in bed and watch a few episodes. But
 navigating to the right folder and choosing an episode which you haven't seen
-yesterday is too much work.
-
-With this small script all you have to do is to type "playfuturama" (using tab
-completion of course!) if you have set up e.g. this alias::
+yesterday is too much work. With this small script all you have to do is to
+type "playfuturama" (using tab completion of course!) if you have set up e.g.
+this alias::
 
   alias playfuturama='choose-next -c "mplayer -fs" "/media/usb/Futurama"'
 
