@@ -354,8 +354,7 @@ def main(args=None):
         main_throws(args)
     except Error as exc:
         prog_name = os.path.basename(sys.argv[0])
-        msg = '{}: {}'.format(prog_name, str(exc))
-        logging.critical(msg)
+        logging.critical('%s: %s', prog_name, exc)
         sys.exit(1)
 
 if __name__ == '__main__':
