@@ -330,6 +330,7 @@ def main_throws(args=None):
     parser.add_argument('--include', metavar='PATTERN',
                         help='don\'t exclude files matching PATTERN')
     args = parser.parse_args(args)
+    # Use style='{' after Python 2 support is dropped:
     logging.basicConfig(level=loglevel(args), format='%(message)s')
     args.dir = os.path.realpath(args.dir)
     args.files[:] = [logfile_entry_to_path(os.path.realpath(path), args.dir) for path in args.files]
