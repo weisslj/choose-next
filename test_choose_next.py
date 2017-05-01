@@ -41,7 +41,7 @@ def choose_next_main(*args):
     sys.stdout = stdout_buffer
     try:
         choose_next.main_throws(list(args))
-        return stdout_buffer.getvalue()
+        return stdout_buffer.getvalue().replace(os.linesep, '\n')
     finally:
         sys.stdout = original_stdout
 
@@ -57,7 +57,7 @@ def choose_next_external(*args):
 
 def put_file(dirname, filename):
     """Put file into directory and return absolute path."""
-    path = os.path.join(dirname, filename)
+    path = os.path.realpath(os.path.join(dirname, filename))
     mkdir_p(os.path.dirname(path))
     with open(path, 'w') as stream:
         stream.write(filename)
@@ -101,7 +101,7 @@ class ChooseNextTestCase(unittest.TestCase):
 
     def put_dir(self, dirname):
         """Put directory into the temporary directory and return absolute path."""
-        path = os.path.join(self.tmpdir, dirname)
+        path = os.path.realpath(os.path.join(self.tmpdir, dirname))
         mkdir_p(path)
         return path
 

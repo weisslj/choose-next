@@ -134,7 +134,10 @@ def play_next_file(next_file, logfile_content_list, args):
     #
     retval = 0
     if args.command:
-        next_file_quoted = shlex.quote(next_file_abs)
+        if os.name == 'nt':
+            next_file_quoted = subprocess.list2cmdline([next_file_abs])
+        else:
+            next_file_quoted = shlex.quote(next_file_abs)
         try:
             command = args.command % next_file_quoted
         except TypeError:
