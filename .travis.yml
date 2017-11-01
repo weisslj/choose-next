@@ -1,3 +1,4 @@
+---
 language: python
 python:
   - "2.7"
@@ -6,7 +7,7 @@ python:
   - "3.5"
   - "3.6"
 install:
- - pip install -r requirements-test.txt
+  - pip install -r requirements-test.txt
 script:
   - coverage run test_choose_next.py
   - coverage report --fail-under=100
