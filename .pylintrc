@@ -2,3 +2,8 @@
 
 # Tells whether to display a full report or only the messages
 reports=no
+
+[FORMAT]
+
+# Expect LF line ending, forbid CRLF:
+expected-line-ending-format=LF
