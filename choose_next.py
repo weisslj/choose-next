@@ -47,17 +47,21 @@ if sys.version_info < (3, 4):
                 raise
     MAKEDIRS = makedirs_compat
 
+
 class Error(Exception):
     """Abort program, used in test suite."""
     pass
+
 
 def read_dir_error(exc):
     """Raise Error exception on read_dir error."""
     raise Error('error listing {}: {}'.format(exc.filename, exc.strerror))
 
+
 def remove_hidden(names):
     """Remove entries starting with a dot (.) from list of basenames."""
     names[:] = [name for name in names if not name.startswith('.')]
+
 
 def read_dir(path, recursive=False, exclude=None, include=None, include_directories=False):
     """Return a list of paths in directory at path (recursively)."""
@@ -71,12 +75,13 @@ def read_dir(path, recursive=False, exclude=None, include=None, include_director
         for name in names:
             abspath = os.path.join(root, name)
             if not exclude or \
-                    ((not fnmatch.fnmatch(abspath, exclude)) or \
-                    (include and fnmatch.fnmatch(abspath, include))):
+               ((not fnmatch.fnmatch(abspath, exclude)) or
+                   (include and fnmatch.fnmatch(abspath, include))):
                 paths.append(os.path.relpath(abspath, path))
         if not recursive:
             break
     return paths
+
 
 def make_relpath(path, start=os.curdir):
     """Return relative path to start directory, raise error if it leads outside."""
@@ -88,10 +93,12 @@ def make_relpath(path, start=os.curdir):
     except ValueError as exc:  # only on Windows, e.g. if drive letters differ
         raise Error('{}: {}'.format(path, exc))
 
+
 def logfile_entry_to_path(entry, dirpath):
     """Convert logfile entry to relative path."""
     path = entry if os.path.isabs(entry) else os.path.join(dirpath, entry)
     return make_relpath(path, dirpath)
+
 
 def read_logfile(path, dirpath):
     """Return list of logfile entries."""
@@ -106,12 +113,16 @@ def read_logfile(path, dirpath):
         else:
             raise Error('error reading logfile {}: {}'.format(path, exc.strerror))
 
+
 def write_logfile(path, entries):
     """Write logfile entries to path."""
     with open(path, 'wb') as stream:
         stream.write(b''.join(os.fsencode(entry) + b'\0' for entry in entries))
 
+
 NUMKEY_REGEX = re.compile(r'(\s*[+-]?[0-9]+\.?[0-9]*\s*)(.*)')
+
+
 def numkey(string):
     """Return a sort key that works for filenames like '23 - foo'."""
     match = NUMKEY_REGEX.match(string)
@@ -119,13 +130,16 @@ def numkey(string):
         return float(match.group(1)), locale.strxfrm(match.group(2))
     return (0.0, locale.strxfrm(string))
 
+
 def path_split_all(path):
     """Return a list of path elements, e.g. 'a/b/..//c' -> ['a', 'c']."""
     return os.path.normpath(path).split(os.sep)
 
+
 def numkey_path(path):
     """Return a sort key that works for paths like '2/23 - foo'."""
     return tuple(numkey(s) for s in path_split_all(path))
+
 
 def play_next_file(next_file, logfile_content_list, args):
     """Part of main functionality."""
@@ -160,6 +174,7 @@ def play_next_file(next_file, logfile_content_list, args):
             write_logfile(args.logfile, new_logfile_content_list)
     #
     return retval
+
 
 def choose_next_file(args, next_file=None):
     """Part of main functionality."""
@@ -212,6 +227,7 @@ def choose_next_file(args, next_file=None):
                                 islice(cycle(available_list), index, None)))
     return next_file, logfile_content_list
 
+
 def choose_next(args):
     """Main functionality."""
     for i in range(args.number) if args.number >= 0 else count():
@@ -220,6 +236,7 @@ def choose_next(args):
         retval = play_next_file(next_file, logfile_content_list, args)
         if retval != 0:
             raise Error('command failed')
+
 
 def modify_logfile(logfile, args):
     """Modify logfile, e.g. clear first or last entry."""
@@ -231,6 +248,7 @@ def modify_logfile(logfile, args):
             del entries[-1]
         write_logfile(logfile, entries)
 
+
 def dump_logfile(logfile, dirpath, end='\0'):
     """Dump logfile to stdout."""
     for entry in read_logfile(logfile, dirpath):
@@ -239,6 +257,7 @@ def dump_logfile(logfile, dirpath, end='\0'):
             end = end.decode()
         print(entry, end=end)
 
+
 def clear_logfile(logfile):
     """Remove logfile if it exists."""
     try:
@@ -246,6 +265,7 @@ def clear_logfile(logfile):
     except OSError as exc:
         if exc.errno != errno.ENOENT:
             raise Error('error removing logfile {}: {}'.format(logfile, exc.strerror))
+
 
 def logfile_path(dirpath):
     """Generate default logfile path, migrating old formats and creating needed directories."""
@@ -263,10 +283,12 @@ def logfile_path(dirpath):
         os.rename(old_logfile, logfile)
     return logfile
 
+
 def loglevel(args):
     """Return logging level."""
     levels = [logging.CRITICAL, logging.WARNING, logging.INFO, logging.DEBUG]
     return levels[min(len(levels) - 1, args.verbosity)]
+
 
 def main_throws(args=None):
     """Main function, throws exception on error."""
@@ -288,7 +310,7 @@ def main_throws(args=None):
                         help='prefer these files before all others')
     parser.add_argument('--version', action='version', version='%(prog)s 2.0.1')
     parser.add_argument('-c', '--command', metavar='CMD',
-                        help='execute CMD on every selected file; %%s in CMD is substituted '\
+                        help='execute CMD on every selected file; %%s in CMD is substituted '
                              'with the filename, otherwise it is appended to CMD')
     #
     group = parser.add_mutually_exclusive_group()
@@ -301,7 +323,7 @@ def main_throws(args=None):
     group.add_argument('--dump', action='store_true',
                        default=False, help='dump log file to stdout and exit, newline separated')
     group.add_argument('--dump0', action='store_true',
-                       default=False, help='dump log file to stdout and exit, '\
+                       default=False, help='dump log file to stdout and exit, '
                                            'null character separated')
     #
     parser.add_argument('-i', '--no-read', action='store_true',
@@ -352,6 +374,7 @@ def main_throws(args=None):
     else:
         choose_next(args)
 
+
 def main(args=None):
     """Main function, exits program on error."""
     try:
@@ -360,6 +383,7 @@ def main(args=None):
         prog_name = os.path.basename(sys.argv[0])
         logging.critical('%s: %s', prog_name, exc)
         sys.exit(1)
+
 
 if __name__ == '__main__':
     sys.exit(main())

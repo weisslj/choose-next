@@ -12,4 +12,5 @@ script:
   - coverage run test_choose_next.py
   - coverage report --fail-under=100
   - pylint *.py
+  - flake8
   - python setup.py -q install

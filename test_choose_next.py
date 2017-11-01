@@ -22,6 +22,7 @@ import multiprocessing
 
 import choose_next
 
+
 def mkdir_p(path):
     """Like os.makedirs(), but ignores existing directories."""
     try:
@@ -30,9 +31,11 @@ def mkdir_p(path):
         if not os.path.isdir(path):
             raise
 
+
 def fake_sys_exit(arg=0):
     """Raise exception instead of exiting, for testing."""
     raise Exception('sys.exit({!r})'.format(arg))
+
 
 def choose_next_main(*args):
     """Call choose_next.py main function, return captured standard output."""
@@ -45,6 +48,7 @@ def choose_next_main(*args):
     finally:
         sys.stdout = original_stdout
 
+
 def choose_next_external(*args):
     """Call choose_next.py as external process."""
     here = os.path.abspath(os.path.dirname(__file__))
@@ -55,6 +59,7 @@ def choose_next_external(*args):
     return subprocess.check_output([prog] + list(args), stderr=subprocess.STDOUT, shell=shell,
                                    universal_newlines=True)
 
+
 def put_file(dirname, filename):
     """Put file into directory and return absolute path."""
     path = os.path.realpath(os.path.join(dirname, filename))
@@ -63,9 +68,11 @@ def put_file(dirname, filename):
         stream.write(filename)
     return path
 
+
 def put_files(dirname, *filenames):
     """Put files into directory and return absolute paths."""
     return [put_file(dirname, filename) for filename in filenames]
+
 
 class ChooseNextTestCase(unittest.TestCase):
     # pylint: disable=too-many-public-methods
@@ -415,9 +422,11 @@ class ChooseNextTestCase(unittest.TestCase):
         """Check that '-r' and '--random' options work."""
         names = ['{:02d}'.format(i) for i in range(0, 50)]
         files = self.put_files(*names)
+
         def random_files(*args):
             """Choose files in random fashion."""
             return [choose_next_main(self.tmpdir, '-r', *args).rstrip('\n') for _name in files]
+
         self.assertEqual(files, sorted(random_files()))
         self.assertNotEqual(random_files(), random_files())  # very unlikely to fail
 
@@ -563,6 +572,7 @@ class ChooseNextTestCase(unittest.TestCase):
         self.assertEqual(file_c + '\n', choose_next_main(self.tmpdir, '-L', logfile))
         self.assertEqual(file_a + '\n', choose_next_main(self.tmpdir, '-L', logfile))
         shutil.rmtree(logdir)
+
 
 if __name__ == '__main__':
     unittest.main(buffer=True, catchbreak=True)
