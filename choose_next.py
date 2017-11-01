@@ -75,8 +75,8 @@ def read_dir(path, recursive=False, exclude=None, include=None, include_director
         for name in names:
             abspath = os.path.join(root, name)
             if not exclude or \
-               ((not fnmatch.fnmatch(abspath, exclude)) or
-                   (include and fnmatch.fnmatch(abspath, include))):
+                    ((not fnmatch.fnmatch(abspath, exclude)) or
+                     (include and fnmatch.fnmatch(abspath, include))):
                 paths.append(os.path.relpath(abspath, path))
         if not recursive:
             break
