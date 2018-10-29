@@ -110,8 +110,7 @@ def read_logfile(path, dirpath):
     except IOError as exc:
         if exc.errno == errno.ENOENT:
             return []
-        else:
-            raise Error('error reading logfile {}: {}'.format(path, exc.strerror))
+        raise Error('error reading logfile {}: {}'.format(path, exc.strerror))
 
 
 def write_logfile(path, entries):
