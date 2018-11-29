@@ -50,7 +50,6 @@ if sys.version_info < (3, 4):
 
 class Error(Exception):
     """Abort program, used in test suite."""
-    pass
 
 
 def read_dir_error(exc):
