@@ -294,7 +294,7 @@ def main_throws(args=None):
     locale.setlocale(locale.LC_ALL, '')
     #
     usage = '%(prog)s [OPTION]... DIR [FILE]...'
-    desc = 'Chooses a file from directory DIR (recursively) and print it\'s '\
+    desc = "Chooses a file from directory DIR (recursively) and print it's "\
         'name to stdout. Afterwards it is appended to a log file. Only '\
         'files which are not in log file are considered for selection.\n'\
         'Tries to choose the file which is next in lexical order in DIR.'
@@ -325,7 +325,7 @@ def main_throws(args=None):
                                            'null character separated')
     #
     parser.add_argument('-i', '--no-read', action='store_true',
-                        default=False, help='don\'t use log file to filter selection')
+                        default=False, help="don't use log file to filter selection")
     parser.add_argument('-L', '--logfile', metavar='FILE',
                         help='path of log file (default: ~/.choose_next/<dirname>)')
     parser.add_argument('-l', '--last', action='store_true',
@@ -339,7 +339,7 @@ def main_throws(args=None):
     parser.add_argument('-p', '--prepend', action='store_true',
                         default=False, help='prepend selected filename instead of appending')
     parser.add_argument('-q', '--quiet', action='store_const', dest='verbosity',
-                        const=0, help='don\'t output anything')
+                        const=0, help="don't output anything")
     parser.add_argument('-R', '--recursive', action='store_true', dest='recursive',
                         help=argparse.SUPPRESS)
     parser.add_argument('-r', '--random', action='store_true',
@@ -347,11 +347,11 @@ def main_throws(args=None):
     parser.add_argument('-v', '--verbose', action='count', dest='verbosity',
                         help='be verbose (can be used multiple times)')
     parser.add_argument('-w', '--no-write', action='store_true',
-                        default=False, help='don\'t record selected files to log file')
+                        default=False, help="don't record selected files to log file")
     parser.add_argument('--exclude', metavar='PATTERN',
                         help='exclude files matching PATTERN')
     parser.add_argument('--include', metavar='PATTERN',
-                        help='don\'t exclude files matching PATTERN')
+                        help="don't exclude files matching PATTERN")
     args = parser.parse_args(args)
     # Use style='{' after Python 2 support is dropped:
     logging.basicConfig(level=loglevel(args), format='%(message)s')

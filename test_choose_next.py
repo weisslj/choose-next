@@ -229,7 +229,7 @@ class ChooseNextTestCase(unittest.TestCase):
             'python -c "'
             'from sys import argv as a;'
             's = open(a[1]).read();'
-            'open(a[1], \'w\').write(s.replace(\'a\', \'b\'))'
+            "open(a[1], 'w').write(s.replace('a', 'b'))"
             '"'
         )
         self.assertEqual(file_a1 + '\n', choose_next_main(self.tmpdir, '-c', pysed))
