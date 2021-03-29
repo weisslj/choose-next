@@ -18,6 +18,7 @@ News
 ----
 
 =====  ==========  ==================================================================
+3.0.0  2021-03-29  Require Python 3.6 (no new features, just usage of "try ... from")
 2.0.1  2017-05-01  Small fixes, Windows compatible
 2.0.0  2017-04-30  Bugfixes, Python 3 support, extensive test suite
 1.1    2011-04-26  Bugfixes, ``--exclude``, ``--include``, and ``-d``
