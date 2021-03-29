@@ -90,7 +90,7 @@ def make_relpath(path, start=os.curdir):
             raise Error('error, path {} leads outside given directory'.format(path))
         return relpath
     except ValueError as exc:  # only on Windows, e.g. if drive letters differ
-        raise Error('{}: {}'.format(path, exc))
+        raise Error('{}: {}'.format(path, exc)) from exc
 
 
 def logfile_entry_to_path(entry, dirpath):
@@ -109,7 +109,7 @@ def read_logfile(path, dirpath):
     except IOError as exc:
         if exc.errno == errno.ENOENT:
             return []
-        raise Error('error reading logfile {}: {}'.format(path, exc.strerror))
+        raise Error('error reading logfile {}: {}'.format(path, exc.strerror)) from exc
 
 
 def write_logfile(path, entries):
@@ -262,7 +262,7 @@ def clear_logfile(logfile):
         os.unlink(logfile)
     except OSError as exc:
         if exc.errno != errno.ENOENT:
-            raise Error('error removing logfile {}: {}'.format(logfile, exc.strerror))
+            raise Error('error removing logfile {}: {}'.format(logfile, exc.strerror)) from exc
 
 
 def logfile_path(dirpath):
@@ -273,7 +273,7 @@ def logfile_path(dirpath):
     try:
         MAKEDIRS(logdir, exist_ok=True)
     except OSError as exc:
-        raise Error('error creating logdir {}: {}'.format(logdir, exc.strerror))
+        raise Error('error creating logdir {}: {}'.format(logdir, exc.strerror)) from exc
     logfile = os.path.join(logdir, quote_plus(dirpath))
     # Migrate from old logfile name:
     old_logfile = os.path.join(logdir, dirpath.replace(os.path.sep, '_'))
